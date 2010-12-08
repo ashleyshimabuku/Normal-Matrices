@@ -179,7 +179,7 @@ while (<INPUT>) {
 	$SOLUTIONS_FILE = "generic.sage.out";
 	system "/Applications/sage/sage $GENERIC_TEMPFILE > $SOLUTIONS_FILE";
 	
-	exit; # Working up until here
+	exit; # Working up until here!!!
 	
 	# Capture solutions
 	# Read in solutions form temp file
