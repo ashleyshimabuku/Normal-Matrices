@@ -1,0 +1,291 @@
+#!/usr/bin/perl 
+# Take each line of output file and find Hilbert basis
+
+# Makes sure that an input file is specifed
+if (@ARGV < 1) { 
+	die "No file specified\n";		# error message
+} else {
+	print "Processing @ARGV[0]\n";	
+}
+
+# Opens file 
+if (! open INPUT, "@ARGV[0]") {
+	die "Trouble opening file @ARGV[0]\n";		# error message
+}
+
+# Iterates all the lines of the input file
+while (<INPUT>) {
+	chomp;
+	system "touch temp/tempfile.in";
+	if (! open OUTPUT_FILE, ">", "temp/tempfile.in") {
+		die "Trouble opening tempfile\n";		# error message
+		close INPUT;
+	}
+	
+	# Take in line and bulid 4x4 matrix file in Normaliz format
+	printf OUTPUT_FILE "4\n4\n1 0 0 0\n0 1 0 0\n0 0 1 0\n%s\nintegral_closure\n", join(" ", split(/,/, $_));
+	close OUTPUT_FILE;
+	
+	
+	# Find Hilbert basis
+	# Take the temp file, put in Normaliz and get Hilbert basis (.gen -f)
+	system "/Applications/Normaliz/norm64 -f temp/tempfile.in";
+	
+
+	# Input Hilbert basis
+	# Opens file TEMPFILE.GEN
+	if (! open TEMPFILEGEN, "temp/tempfile.gen") {
+		die "Trouble opening file temp/tempfile.gen\n";		# error message
+	}
+
+
+	# Slurp the hibert basis matrix into an array
+	@hilbert_data = <TEMPFILEGEN>;
+
+	
+	# Take off the first two elements of the array (unnecessary row and column data)
+	if(scalar(@hilbert_data) > 2) {
+		@hilbert_data = @hilbert_data[2..$#hilbert_data];
+	}
+	
+
+
+	# Find unimodular simplicies
+	
+	
+	# Create temp file for Sage commands
+	# Using a temp file makes Sage run faster
+	$SAGE_TEMPFILE = "temp.sage";
+	system "rm $SAGE_TEMPFILE";
+	system "touch $SAGE_TEMPFILE";
+	if (! open SAGE_OUTPUT_FILE, ">", "$SAGE_TEMPFILE") {
+		die "Trouble opening sage tempfile\n";		# error message
+	}
+	
+	
+	# Array of every 4x4 matricies
+	@matrices;
+
+	$count = 0;
+	# Take all 4x4 submatricies of the .gen matrix 
+	# Use Sage to find determinant
+	for ($ix = 0; $ix < scalar(@hilbert_data); $ix++) {
+		for ($ij = $ix+1; $ij < scalar(@hilbert_data); $ij++) {
+			for ($iy = $ij+1; $iy < scalar(@hilbert_data); $iy++) {
+				for ($iz = $iy+1; $iz < scalar(@hilbert_data); $iz++) {
+					
+					# Builds 4x4 matrix from Hilbert basis
+					@subarray = (split(/\s+/,@hilbert_data[$ix]), split(/\s+/,@hilbert_data[$ij]), split(/\s+/,@hilbert_data[$iy]), split(/\s+/,@hilbert_data[$iz]));
+					
+					# Puts all submatricies in array
+					@matrices[$count] = join(',', @subarray);
+					$count++;
+
+					# Builds commad
+					$command = sprintf("M = MatrixSpace(QQ,4,4); A = M([%s]); print det(A);\n", join(',', @subarray));
+
+					# Puts commands into temp file
+					print SAGE_OUTPUT_FILE $command;
+				}
+			}
+		}
+	}
+	
+	close SAGE_OUTPUT_FILE;
+
+	$now = time;
+	
+	# Store determinants in temp file, line numbers corresponds to line numbers in @matricies array
+	$DETERMINANTS_FILE = 'sage_determinants.txt';
+
+	# Use Sage to find determinants
+	$command = "/Applications/sage/sage $SAGE_TEMPFILE > $DETERMINANTS_FILE";
+	system $command;
+	$later = time;
+	printf "Took %d seconds to run $count matrices through sage\n\n", ($later-$now), $count;
+	
+	
+	# Capture determiant value
+	# Read in determinants form temp file
+	if (! open DETERMINANTS_FILE, $DETERMINANTS_FILE) {
+		die "Trouble opening file $DETERMINANTS_FILE\n";		# error message
+	}
+
+
+	# Slurp the determinatns into an array
+	@determinants = <DETERMINANTS_FILE>;
+	
+	close DETERMINANTS_FILE;
+	
+	# Find unimodular simplicies and store in @unimodular_array
+	@unimodular_array;			
+	$count = 0;
+	for($ix = 0; $ix < scalar(@determinants); $ix++) {
+		$det = int(@determinants[$ix]);
+
+		# If det= = 1,-1 save simplex
+		if ($det == -1 || $det == 1) {
+			@unimodular_array[$count] = @matrices[$ix];
+			$count++;
+		}
+	}
+	
+	# Generate a generic point
+	@random_array;
+	
+	# Generate random rational numbers between 0 and 10,000
+	for ($iy = 0; $iy < scalar(@hilbert_data); $iy++) {		
+		$r = rand(10_000);
+		@random_array[$iy] = $r;
+	}
+
+	# Generate generic_pt
+	@generic_pt;
+	for ($ix = 0; $ix < 4; $ix++) {		
+		$temp = 0;		
+		for ($iy = 0; $iy < scalar(@hilbert_data); $iy++) {			
+			$random = @random_array[$iy];
+			@hilbert = split(/\s+/, @hilbert_data[$iy]);
+			$temp += ($random * @hilbert[$ix]);
+		}			
+		@generic_pt[$ix] = $temp;
+	}
+	
+	printf "Generic point is %s\n", join(', ', @generic_pt);
+
+	# Find simplicies in which the generic_pt lives	
+	
+	# Create temp file for Sage commands
+	$GENERIC_TEMPFILE = "generic.sage";
+	system "rm $GENERIC_TEMPFILE";
+	system "touch $GENERIC_TEMPFILE";
+	if (! open GENERIC_OUTPUT_FILE, ">", "$GENERIC_TEMPFILE") {
+		die "Trouble opening generic point tempfile\n";		# error message
+	}
+	
+	
+	# Take each unimodular simplex and ask Sage to solve A_i [x_1,x_2,x_3,x_4] = generic_pt
+	for ($iy = 0; $iy < scalar(@unimodular_array); $iy++) {
+
+		# Build Sage commands
+		$command = sprintf "M44 = MatrixSpace(QQ,4,4); A = M44([%s]); V4 = VectorSpace(QQ,4); b = V4([%s]); print octave.solve_linear_system(A,b); \n", join(',', @unimodular_array[$iy]), join(',', @generic_pt);
+
+		print GENERIC_OUTPUT_FILE $command;
+	}
+
+	close GENERIC_OUTPUT_FILE;
+	
+	# Use Sage to find solution
+	$SOLUTIONS_FILE = "generic.sage.out";
+	system "/Applications/sage/sage $GENERIC_TEMPFILE > $SOLUTIONS_FILE";
+	
+	exit; # Working up until here
+	
+	# Capture solutions
+	# Read in solutions form temp file
+	if (! open GENERIC_OUTPUT_FILE, $GENERICPT_TEMPFILE) {
+		die "Trouble opening file $GENERICPT_TEMPFILE\n";		# error message
+	}
+
+
+	# Slurp the solutions into an array
+	@solutions = <GENERIC_OUTPUT_FILE>;
+
+	
+	printf "There are %d unimodular simplicies\n", scalar(@unimodular_array);
+	printf "Solution array is %d length", scalar(@solutions);
+	
+	 
+	# If matrix of has a positive solution, then generic_pt lives inside simplex
+	# First equation is sum x = 1 for those simplicies
+	
+	@first_eq_array;
+
+	$count = 0;	
+	for($ix = 0; $ix < scalar(@solutions); $ix++) {
+		$solution = int(@solutions[$ix]);
+
+		# If solution > 0, then put 1 into first_eq_array
+		if ($solution > 0) {
+			@first_eq_array[$count] = 1;
+		} else {				# Else put 0 into first_eq_array
+			@first_eq_array[$count] = 0;
+		}
+	}
+
+	
+	# Last entry in first equation is 1
+	@first_eq_array[scalar(@solutions)] = 1;
+	
+
+	
+	# Finds the interior facets of the simplicies
+	
+	
+	# define new 4x4 matrix F = [ x_i line 2 line 3 line 4] 
+	# $command = "M44 = MatrixSpace(QQ,4,4); A = M44([x_1,x_2,x_3,x_4%s]); det(A);\n";
+	
+	# detF = 0 is the equation for the facet between vector line 2, line 3 and line 4
+	# do this for each line
+	
+	# Test if the facet is interior
+	# Find all simplices that contain that facet
+	
+	# take detF equation and plug in other vectors
+	# if there is a sign change then the facet is interior
+	# record which have positive sign and negative sign
+	# if no sign change then trash
+	
+	
+	# for each unimodular simplex define a variable
+	# let index of @unimodular_array = index of the variable in @array_equations
+	# number of equations = i
+	# number of variables
+	# equations
+	# last line "linearity i 1, 2, 3, ..."
+
+
+	@int_facet_array;
+	
+	# Create temp file for Latte equations
+	$LATTE_TEMPFILE = "temp.latte";
+	system "rm $LATTE_TEMPFILE";
+	system "touch $LATTE_TEMPFILE";
+	if (! open LATTE_INPUT_FILE, ">", "$LATTE_TEMPFILE") {
+		die "Trouble opening latte tempfile\n";		# error message
+	}
+	
+	printf LATTTE_INPUT_FILE "scalar(@int_facet_array)\nscalar(@unimodular_array)\n";
+	
+
+	
+	# Build equations
+	# for each facet find the simplices on the left side and right side using sign change from above
+	# put inside latte_tempfile
+
+	
+	
+	
+	# use Latte for yes or no answer
+	# Is there a lattice point?  ./count int fileName
+
+	#system "/Applications/latte temp.latte";
+	#chomp($answer = 'answer')
+	# if no then keep hilbert_basis tempfile
+	#if (!$answer) 
+	
+	
+	
+	
+
+
+}
+
+close INPUT;
+
+
+
+
+
+
+

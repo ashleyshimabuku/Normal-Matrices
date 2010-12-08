@@ -1,0 +1,22 @@
+#!/usr/bin/perl 
+# Finds list of four numbers from 1 to 100 that are relatively prime.
+
+use Math::BigInt;
+
+sub gcd { # find gcd of a list
+	Math::BigInt::bgcd(@_);
+}
+
+
+for($x=1; $x < 100; $x++) { # count from 1 to 100
+	for($y=$x+1; $y < 100; $y++) { # count from 1 to 100
+		for($z=$y+1; $z < 100; $z++) { # count from 1 to 100
+			for($j=$z+1; $j <= 100; $j++) { # count from 1 to 100
+				if(&gcd($x,$y,$z,$j)==1) {
+					print "$x,$y,$z,$j\n";
+				} 
+			}
+		}
+	}
+}
+
