@@ -65,6 +65,7 @@ while (<INPUT>) {
 	
 	# Array of every 4x4 matricies
 	@matrices;
+	@list;
 
 	$count = 0;
 	# Take all 4x4 submatricies of the .gen matrix 
@@ -79,6 +80,7 @@ while (<INPUT>) {
 					
 					# Puts all submatricies in array
 					@matrices[$count] = join(',', @subarray);
+					@list = "$ix, $ij, $iy, $iz\n";
 					$count++;
 
 					# Builds commad
@@ -118,7 +120,8 @@ while (<INPUT>) {
 	close DETERMINANTS_FILE;
 	
 	# Find unimodular simplicies and store in @unimodular_array
-	@unimodular_array;			
+	@unimodular_array;
+	@unimodular_list;	
 	$count = 0;
 	for($ix = 0; $ix < scalar(@determinants); $ix++) {
 		$det = int(@determinants[$ix]);
@@ -127,10 +130,15 @@ while (<INPUT>) {
 		if ($det == -1 || $det == 1) {
 			@unimodular_array[$count] = @matrices[$ix];
 			$count++;
+			
+			# Keep track of Hilbert basis line numbers
+			@unimodular_list[$count] = @list[$ix];
 		}
 	}
 	
+	
 	# Generate a generic point
+
 	@random_array;
 	
 	# Generate random rational numbers between 0 and 10,000
@@ -139,11 +147,12 @@ while (<INPUT>) {
 		@random_array[$iy] = $r;
 	}
 
+
 	# Generate generic_pt
 	@generic_pt;
 	for ($ix = 0; $ix < 4; $ix++) {		
 		$temp = 0;		
-		for ($iy = 0; $iy < scalar(@hilbert_data); $iy++) {			
+		for ($iy = 0; $iy < scalar(@hilbert_data); $iy++) {	
 			$random = @random_array[$iy];
 			@hilbert = split(/\s+/, @hilbert_data[$iy]);
 			$temp += ($random * @hilbert[$ix]);
@@ -152,6 +161,7 @@ while (<INPUT>) {
 	}
 	
 	printf "Generic point is %s\n", join(', ', @generic_pt);
+
 
 	# Find simplicies in which the generic_pt lives	
 	
@@ -164,11 +174,47 @@ while (<INPUT>) {
 	}
 	
 	
+	@unimodular_transpose;
+	$string;
+	@string;
+	@transpose;
+	@unimodular_transpose;
+	
+	# Find the tranpose of each 4x4 unimodular matrix
+	for ($ix = 0; $ix < scalar(@unimodular_array); $ix++) {
+		$count = 0;
+		$string = @unimodular_array[$ix];
+		@string = split(/,/, $string);	
+
+		for ($iy = 0; $iy < 16; $iy += 4) {
+			@transpose[$count] = @string[$iy];
+			$count++;
+		}
+		for ($ij = 1; $ij < 16; $ij += 4) {
+			@transpose[$count] = @string[$ij];
+			$count++;
+		}
+		for ($ik = 2; $ik < 16; $ik += 4) {
+			@transpose[$count] = @string[$ik];
+			$count++;
+		}
+		for ($iz = 3; $iz < 16; $iz += 4) {
+			@transpose[$count] = @string[$iz];
+			$count++;
+		}
+				
+		# Puts all submatricies in array
+		@unimodular_transpose[$ix] = @transpose;		
+	}
+	
+	exit;
+
+	
 	# Take each unimodular simplex and ask Sage to solve A_i [x_1,x_2,x_3,x_4] = generic_pt
-	for ($iy = 0; $iy < scalar(@unimodular_array); $iy++) {
+	for ($iy = 0; $iy < scalar(@unimodular_transpose); $iy++) {
 
 		# Build Sage commands
-		$command = sprintf "M44 = MatrixSpace(QQ,4,4); A = M44([%s]); V4 = VectorSpace(QQ,4); b = V4([%s]); print octave.solve_linear_system(A,b); \n", join(',', @unimodular_array[$iy]), join(',', @generic_pt);
+		$command = sprintf "M44 = MatrixSpace(QQ,4,4); A = M44([%s]); V4 = VectorSpace(QQ,4); b = V4([%s]); print octave.solve_linear_system(A,b); \n", join(',', @unimodular_transpose[$iy]), join(',', @generic_pt);
 
 		print GENERIC_OUTPUT_FILE $command;
 	}
@@ -179,70 +225,132 @@ while (<INPUT>) {
 	$SOLUTIONS_FILE = "generic.sage.out";
 	system "/Applications/sage/sage $GENERIC_TEMPFILE > $SOLUTIONS_FILE";
 	
-	exit; # Working up until here!!!
 	
 	# Capture solutions
 	# Read in solutions form temp file
-	if (! open GENERIC_OUTPUT_FILE, $GENERICPT_TEMPFILE) {
-		die "Trouble opening file $GENERICPT_TEMPFILE\n";		# error message
+	if (! open SOLUTIONS_FILE, $SOLUTIONS_FILE) {
+		die "Trouble opening file $SOLUTIONS_FILE\n";		# error message
 	}
 
 
 	# Slurp the solutions into an array
-	@solutions = <GENERIC_OUTPUT_FILE>;
+	@solutions_array = <SOLUTIONS_FILE>;
 
-	
-	printf "There are %d unimodular simplicies\n", scalar(@unimodular_array);
-	printf "Solution array is %d length", scalar(@solutions);
-	
-	 
+
 	# If matrix of has a positive solution, then generic_pt lives inside simplex
-	# First equation is sum x = 1 for those simplicies
+	# First equation is sum x = 1 for those simplicies it lives inside
 	
 	@first_eq_array;
-
-	$count = 0;	
-	for($ix = 0; $ix < scalar(@solutions); $ix++) {
-		$solution = int(@solutions[$ix]);
-
+	@solution;
+	
+	printf "solutions_array %s\n", join(', ', @solutions_array);
+	
+	$count = 0;
+	$string;
+	for($ix = 0; $ix < scalar(@solutions_array); $ix++) {
+		$positive = 0;
+		for ($iy = 0; $iy < 4; $iy++) {
+			$string = @solutions_array[$ix];
+			@solution = split(/,/, substr($string, 1, length($string)-2));	
+			printf "@solution[$iy]\n";		
+			$solution = @solution[$iy];
+			
+			if ($solution > 0) {
+				$positive++;
+			} 
+		}
+		
 		# If solution > 0, then put 1 into first_eq_array
-		if ($solution > 0) {
-			@first_eq_array[$count] = 1;
-		} else {				# Else put 0 into first_eq_array
-			@first_eq_array[$count] = 0;
+		if ($positive == 4) {
+			@first_eq_array_[$ix] = 1;
+			$count++;
+		} else {		# If solution is not positive then put 0 in to first_eq_array
+			@first_eq_array_[$ix] = 0;
 		}
 	}
 
-	
-	# Last entry in first equation is 1
-	@first_eq_array[scalar(@solutions)] = 1;
-	
+	printf "The generic point lives in %d simplicies\n", $count;
+
 
 	
+	# Last entry in first equation is 1
+	@first_eq_array[scalar(@solutions_array)] = 1;
+
+	printf "First equation %s\n", join(', ', @first_eq_array);
+
+exit;
+	
 	# Finds the interior facets of the simplicies
-	
-	
+		
+
+	# For each simpliex gererate facets
 	# define new 4x4 matrix F = [ x_i line 2 line 3 line 4] 
-	# $command = "M44 = MatrixSpace(QQ,4,4); A = M44([x_1,x_2,x_3,x_4%s]); det(A);\n";
-	
-	# detF = 0 is the equation for the facet between vector line 2, line 3 and line 4
-	# do this for each line
-	
-	# Test if the facet is interior
 	# Find all simplices that contain that facet
+
+
+	@facets;
+	@subfacet;
+	# Find all possible facets
+	for ($ix = 0; $ix < scalar(@hilbert_data); $ix++) {
+		for ($ij = $ix+1; $ij < scalar(@hilbert_data); $ij++) {
+			for ($iy = $ij+1; $iy < scalar(@hilbert_data); $iy++) {
+				
+				# build list of possible facets
+				@subfacet = "$ix, $ij, $iy";
+				
+				# Puts all list in array
+				@facets[$count] = @subfacet;
+				$count++;
+			}
+		}
+	}
+
+
+	@tempfacet;
+	@templist;
 	
-	# take detF equation and plug in other vectors
-	# if there is a sign change then the facet is interior
-	# record which have positive sign and negative sign
-	# if no sign change then trash
+	# For each facet check if it is in a unimodular simplex
+	# use line numbers
 	
+	for ($ix = 0; $ix < scalar(@facets); $ix++) {
+		@tempfacet = split(/\s+/, @facets[$ix]);
+		
+		for ($iy = 0; $iy < scalar(@unimodular_list); $iy++) {
+			@templist = split(/\s+/, @unimodular_list[$iy]);
+			
+			for ($ij = 0; $ij < scalar(@templist); $ij++) {
+				
+				# Check if facet is in the unimodular simplex by using line numbers
+				
+				# if the facet is in the unimodular simplex then
+				# check if it is interior
+				# if no interior trash
+				# if interior then 
+				# check sign
+				# if positive save 1
+				# if negative save -1
+				
+				# if the facet is not then
+				# save 0 in equation array
+				
+			}
+
+		}
+		
+		
+	}
 	
-	# for each unimodular simplex define a variable
-	# let index of @unimodular_array = index of the variable in @array_equations
+	# at the end of each equation array save 0
+
+	# save first equation array and all other in one file of the form
 	# number of equations = i
 	# number of variables
 	# equations
 	# last line "linearity i 1, 2, 3, ..."
+
+
+	
+	
 
 
 	@int_facet_array;
@@ -259,17 +367,14 @@ while (<INPUT>) {
 	
 
 	
-	# Build equations
-	# for each facet find the simplices on the left side and right side using sign change from above
-	# put inside latte_tempfile
 
 	
 	
 	
 	# use Latte for yes or no answer
-	# Is there a lattice point?  ./count int fileName
+	# Is there a lattice point?  ./count int temp.latte
 
-	#system "/Applications/latte temp.latte";
+	#system "/Applications/latte ./count int temp.latte";
 	#chomp($answer = 'answer')
 	# if no then keep hilbert_basis tempfile
 	#if (!$answer) 
