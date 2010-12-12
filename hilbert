@@ -27,11 +27,9 @@ while (<INPUT>) {
 	printf OUTPUT_FILE "4\n4\n1 0 0 0\n0 1 0 0\n0 0 1 0\n%s\nintegral_closure\n", join(" ", split(/,/, $_));
 	close OUTPUT_FILE;
 	
-	
 	# Find Hilbert basis
 	# Take the temp file, put in Normaliz and get Hilbert basis (.gen -f)
 	system "/Applications/Normaliz/norm64 -f temp/tempfile.in";
-	
 
 	# Input Hilbert basis
 	# Opens file TEMPFILE.GEN
@@ -39,7 +37,6 @@ while (<INPUT>) {
 		close INPUT;
 		die "Trouble opening file temp/tempfile.gen\n";		# error message
 	}
-
 
 	# Slurp the hibert basis matrix into an array
 	@hilbert_data = <TEMPFILEGEN>;
@@ -321,20 +318,20 @@ while (<INPUT>) {
 				@det1 = (@subHilbertMatrix[1], @subHilbertMatrix[2], @subHilbertMatrix[3],
 						 @subHilbertMatrix[5], @subHilbertMatrix[6], @subHilbertMatrix[7],
 						 @subHilbertMatrix[9], @subHilbertMatrix[10], @subHilbertMatrix[11]);
-
+				
 				@det2 = (@subHilbertMatrix[0], @subHilbertMatrix[2], @subHilbertMatrix[3],
 						 @subHilbertMatrix[4], @subHilbertMatrix[6], @subHilbertMatrix[7],
 						 @subHilbertMatrix[8], @subHilbertMatrix[10], @subHilbertMatrix[11]);
-
+				
 				@det3 = (@subHilbertMatrix[0], @subHilbertMatrix[1], @subHilbertMatrix[3],
 						 @subHilbertMatrix[4], @subHilbertMatrix[5], @subHilbertMatrix[7],
 						 @subHilbertMatrix[8], @subHilbertMatrix[9], @subHilbertMatrix[11]);
-
+				
 				@det4 = (@subHilbertMatrix[0], @subHilbertMatrix[1], @subHilbertMatrix[2],
 						 @subHilbertMatrix[4], @subHilbertMatrix[5], @subHilbertMatrix[6],
 						 @subHilbertMatrix[8], @subHilbertMatrix[9], @subHilbertMatrix[10]);
-				
-				# Builds commad
+
+			# Builds commad
 				$command = join('',sprintf("M = MatrixSpace(QQ,3,3); A = M([%s]); print det(A);", join(',', @det1)),
 						   sprintf("M = MatrixSpace(QQ,3,3); A = M([%s]); print det(A);", join(',', @det2)),
 						   sprintf("M = MatrixSpace(QQ,3,3); A = M([%s]); print det(A);", join(',', @det3)),
@@ -386,7 +383,7 @@ while (<INPUT>) {
 			push(@facetEquation, 0);
 			
 			# Puts all submatricies in array
-			push(@latte_equations, join(',', @facetEquation));	
+			push(@latte_equations, join(' ', @facetEquation));	
 		}
 		
 		print "Facet (@currentFacet) equation is @facetEquation (" . @facetEquation . ") long\n";
@@ -407,26 +404,22 @@ while (<INPUT>) {
 		die "Trouble opening latte tempfile\n";		# error message
 	}
 	
-	$number_of_equations = scalar(@latte_array) + 1;
+	$number_of_equations = scalar(@latte_equations) + 1;
 	@linearity;
-	for($ix = 0; $ix < scalar($number_of_equations); $ix++){
-		push(@linearity, $ix);
-	}
+	push(@linearity, (1..$number_of_equations));
 	
-	printf LATTTE_INPUT_FILE "$number_of_equations\nscalar(@unimodular_array)\n@first_equation_array\n@latte_array\nlinearity $number_of_equations @linearity";
+	printf LATTE_INPUT_FILE "%d\n%d\n%s\n", $number_of_equations, scalar(@unimodular_array), join(' ', @first_eq_array);
+	for $i (@latte_equations) {
+		printf LATTE_INPUT_FILE "%s\n", $i;
+	}
+	printf LATTE_INPUT_FILE "linearity %d %s\n", $number_of_equations, join(' ',@linearity);
 	
 	# Use Latte for yes or no answer
 	# Is there a lattice point?  ./count int temp.latte
 
-	system "/Applications/latte ./count int temp.latte";
-
+	system "/Applications/latte/count int temp.latte";
+	exit;
 	# if no then keep hilbert_basis tempfile
-	
-	
-	
-	
-
-
 }
 
 close INPUT;

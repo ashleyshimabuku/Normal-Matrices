@@ -1,9 +1,6 @@
-integer hilbert_basis_elements = 8
+integer hilbert_basis_elements = 7
 integer number_extreme_rays = 4
 integer rank = 4
-integer index = 5
+integer index = 4
 integer number_support_hyperplanes = 4
-boolean homogeneous = true
-integer height_1_elements = 4
-vector 4 homogeneous_weights = 1 1 1 -1 
-integer multiplicity = 5
+boolean homogeneous = false
