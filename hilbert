@@ -1,6 +1,7 @@
 #!/usr/bin/perl 
 # Take each line of output file and find Hilbert basis
 
+
 # Makes sure that an input file is specifed
 if (@ARGV < 1) { 
 	die "No file specified\n";		# error message
@@ -18,8 +19,8 @@ while (<INPUT>) {
 	chomp;
 	system "touch temp/tempfile.in";
 	if (! open OUTPUT_FILE, ">", "temp/tempfile.in") {
-		die "Trouble opening tempfile\n";		# error message
 		close INPUT;
+		die "Trouble opening tempfile\n";		# error message
 	}
 	
 	# Take in line and bulid 4x4 matrix file in Normaliz format
@@ -35,20 +36,19 @@ while (<INPUT>) {
 	# Input Hilbert basis
 	# Opens file TEMPFILE.GEN
 	if (! open TEMPFILEGEN, "temp/tempfile.gen") {
+		close INPUT;
 		die "Trouble opening file temp/tempfile.gen\n";		# error message
 	}
 
 
 	# Slurp the hibert basis matrix into an array
 	@hilbert_data = <TEMPFILEGEN>;
+	close TEMPFILEGEN;
 
-	
 	# Take off the first two elements of the array (unnecessary row and column data)
 	if(scalar(@hilbert_data) > 2) {
 		@hilbert_data = @hilbert_data[2..$#hilbert_data];
 	}
-	
-
 
 	# Find unimodular simplicies
 	
@@ -59,13 +59,14 @@ while (<INPUT>) {
 	system "rm $SAGE_TEMPFILE";
 	system "touch $SAGE_TEMPFILE";
 	if (! open SAGE_OUTPUT_FILE, ">", "$SAGE_TEMPFILE") {
+		close INPUT;
 		die "Trouble opening sage tempfile\n";		# error message
 	}
 	
 	
 	# Array of every 4x4 matricies
 	@matrices;
-	@list;
+	@hilbertLineNumbers;
 
 	$count = 0;
 	# Take all 4x4 submatricies of the .gen matrix 
@@ -80,7 +81,7 @@ while (<INPUT>) {
 					
 					# Puts all submatricies in array
 					@matrices[$count] = join(',', @subarray);
-					@list = "$ix, $ij, $iy, $iz\n";
+					push(@hilbertLineNumbers, "$ix,$ij,$iy,$iz");
 					$count++;
 
 					# Builds commad
@@ -110,6 +111,7 @@ while (<INPUT>) {
 	# Capture determiant value
 	# Read in determinants form temp file
 	if (! open DETERMINANTS_FILE, $DETERMINANTS_FILE) {
+		close INPUT;
 		die "Trouble opening file $DETERMINANTS_FILE\n";		# error message
 	}
 
@@ -128,13 +130,14 @@ while (<INPUT>) {
 
 		# If det= = 1,-1 save simplex
 		if ($det == -1 || $det == 1) {
-			@unimodular_array[$count] = @matrices[$ix];
-			$count++;
+			push(@unimodular_array, @matrices[$ix]);
 			
 			# Keep track of Hilbert basis line numbers
-			@unimodular_list[$count] = @list[$ix];
+			push(@unimodular_list, @hilbertLineNumbers[$ix]);
 		}
 	}
+	
+	printf "Unimodular List is %d long\n", scalar(@unimodular_list);
 	
 	
 	# Generate a generic point
@@ -142,9 +145,9 @@ while (<INPUT>) {
 	@random_array;
 	
 	# Generate random rational numbers between 0 and 10,000
-	for ($iy = 0; $iy < scalar(@hilbert_data); $iy++) {		
+	for ($ix = 0; $ix < scalar(@hilbert_data); $ix++) {		
 		$r = rand(10_000);
-		@random_array[$iy] = $r;
+		@random_array[$ix] = $r;
 	}
 
 
@@ -160,7 +163,7 @@ while (<INPUT>) {
 		@generic_pt[$ix] = $temp;
 	}
 	
-	printf "Generic point is %s\n", join(', ', @generic_pt);
+	# printf "Generic point is %s\n", join(', ', @generic_pt);
 
 
 	# Find simplicies in which the generic_pt lives	
@@ -170,6 +173,7 @@ while (<INPUT>) {
 	system "rm $GENERIC_TEMPFILE";
 	system "touch $GENERIC_TEMPFILE";
 	if (! open GENERIC_OUTPUT_FILE, ">", "$GENERIC_TEMPFILE") {
+		close INPUT;
 		die "Trouble opening generic point tempfile\n";		# error message
 	}
 	
@@ -179,7 +183,6 @@ while (<INPUT>) {
 	@string;
 	@transpose;
 	@unimodular_transpose;
-	
 	# Find the tranpose of each 4x4 unimodular matrix
 	for ($ix = 0; $ix < scalar(@unimodular_array); $ix++) {
 		$count = 0;
@@ -204,18 +207,13 @@ while (<INPUT>) {
 		}
 				
 		# Puts all submatricies in array
-		@unimodular_transpose[$ix] = @transpose;		
+		@unimodular_transpose[$ix] = join(',',@transpose);		
 	}
 	
-	exit;
-
-	
 	# Take each unimodular simplex and ask Sage to solve A_i [x_1,x_2,x_3,x_4] = generic_pt
-	for ($iy = 0; $iy < scalar(@unimodular_transpose); $iy++) {
-
+	for ($ix = 0; $ix < scalar(@unimodular_transpose); $ix++) {
 		# Build Sage commands
-		$command = sprintf "M44 = MatrixSpace(QQ,4,4); A = M44([%s]); V4 = VectorSpace(QQ,4); b = V4([%s]); print octave.solve_linear_system(A,b); \n", join(',', @unimodular_transpose[$iy]), join(',', @generic_pt);
-
+		$command = sprintf "M44 = MatrixSpace(QQ,4,4); A = M44([%s]); V4 = VectorSpace(QQ,4); b = V4([%s]); print octave.solve_linear_system(A,b); \n", @unimodular_transpose[$ix], join(',', @generic_pt);
 		print GENERIC_OUTPUT_FILE $command;
 	}
 
@@ -229,13 +227,14 @@ while (<INPUT>) {
 	# Capture solutions
 	# Read in solutions form temp file
 	if (! open SOLUTIONS_FILE, $SOLUTIONS_FILE) {
+		close INPUT;
 		die "Trouble opening file $SOLUTIONS_FILE\n";		# error message
 	}
 
 
 	# Slurp the solutions into an array
 	@solutions_array = <SOLUTIONS_FILE>;
-
+	close SOLUTIONS_FILE;
 
 	# If matrix of has a positive solution, then generic_pt lives inside simplex
 	# First equation is sum x = 1 for those simplicies it lives inside
@@ -243,43 +242,32 @@ while (<INPUT>) {
 	@first_eq_array;
 	@solution;
 	
-	printf "solutions_array %s\n", join(', ', @solutions_array);
-	
-	$count = 0;
-	$string;
 	for($ix = 0; $ix < scalar(@solutions_array); $ix++) {
-		$positive = 0;
-		for ($iy = 0; $iy < 4; $iy++) {
-			$string = @solutions_array[$ix];
-			@solution = split(/,/, substr($string, 1, length($string)-2));	
-			printf "@solution[$iy]\n";		
-			$solution = @solution[$iy];
-			
-			if ($solution > 0) {
-				$positive++;
-			} 
+		# Clean and split the solution (4 numbers)
+		$string = @solutions_array[$ix];		
+		chomp($string);
+		@solution = split(/,/, substr($string, 1, length($string)-2));
+		
+		# iterate the solution array
+		$all_positive = 1;
+		for($ij = 0; $ij < scalar(@solution); $ij++) {			
+			if(@solution[$ij] <= 0) {
+				$all_positive = 0;
+			}
 		}
 		
-		# If solution > 0, then put 1 into first_eq_array
-		if ($positive == 4) {
-			@first_eq_array_[$ix] = 1;
-			$count++;
-		} else {		# If solution is not positive then put 0 in to first_eq_array
-			@first_eq_array_[$ix] = 0;
-		}
+		push(@first_eq_array, $all_positive);
+				
 	}
-
-	printf "The generic point lives in %d simplicies\n", $count;
-
-
 	
+#	printf "Solutions array is %d elements long\n", scalar(@solutions_array);
+#	printf "Equations array is %d elements long\n", scalar(@first_eq_array);
+
 	# Last entry in first equation is 1
-	@first_eq_array[scalar(@solutions_array)] = 1;
+	push(@first_eq_array, 1);
 
 	printf "First equation %s\n", join(', ', @first_eq_array);
 
-exit;
-	
 	# Finds the interior facets of the simplicies
 		
 
@@ -289,57 +277,56 @@ exit;
 
 
 	@facets;
-	@subfacet;
 	# Find all possible facets
 	for ($ix = 0; $ix < scalar(@hilbert_data); $ix++) {
 		for ($ij = $ix+1; $ij < scalar(@hilbert_data); $ij++) {
 			for ($iy = $ij+1; $iy < scalar(@hilbert_data); $iy++) {
 				
-				# build list of possible facets
-				@subfacet = "$ix, $ij, $iy";
-				
-				# Puts all list in array
-				@facets[$count] = @subfacet;
-				$count++;
+				push(@facets, "$ix,$ij,$iy");
 			}
 		}
 	}
 
-
-	@tempfacet;
-	@templist;
+	@currentFacet;
+	@currentUnimodular;
 	
 	# For each facet check if it is in a unimodular simplex
-	# use line numbers
+	# use line numbers	
 	
 	for ($ix = 0; $ix < scalar(@facets); $ix++) {
-		@tempfacet = split(/\s+/, @facets[$ix]);
+		@currentFacet = split(/,/, @facets[$ix]);
 		
 		for ($iy = 0; $iy < scalar(@unimodular_list); $iy++) {
-			@templist = split(/\s+/, @unimodular_list[$iy]);
+			@currentUnimodular = split(/,/, @unimodular_list[$iy]);
 			
-			for ($ij = 0; $ij < scalar(@templist); $ij++) {
-				
-				# Check if facet is in the unimodular simplex by using line numbers
-				
+			$matchCount = 0;
+			for($ij = 0; $ij < scalar(@currentFacet); $ij++) {
+				for($ik = 0; $ik < scalar(@currentUnimodular); $ik++) {
+					if(@currentFacet[$ij] eq @currentUnimodular[$ik]) {
+						$matchCount++;	
+					}
+				}
+			}
+			
+			if($matchCount == 3) {
+				print "@currentUnimodular contains @currentFacet\n";				
 				# if the facet is in the unimodular simplex then
 				# check if it is interior
-				# if no interior trash
-				# if interior then 
-				# check sign
-				# if positive save 1
-				# if negative save -1
-				
-				# if the facet is not then
-				# save 0 in equation array
-				
 			}
+			# if no interior trash
+			# if interior then 
+			# check sign
+			# if positive save 1
+			# if negative save -1
+			
+			# if the facet is not then
+			# save 0 in equation array							
 
 		}
 		
 		
 	}
-	
+	exit;
 	# at the end of each equation array save 0
 
 	# save first equation array and all other in one file of the form
@@ -387,7 +374,6 @@ exit;
 }
 
 close INPUT;
-
 
 
 
