@@ -1,33 +1,46 @@
-7 Hilbert basis elements
+8 Hilbert basis elements
+4 height 1 Hilbert basis elements
 4 extreme rays
 4 support hyperplanes
 
 rank = 4 (maximal)
-index = 4
+index = 5
 original monoid is not integrally closed
 
-extreme rays are not homogeneous
+extreme rays are homogeneous via the linear form:
+1 1 1 -1 
+
+Hilbert basis elements are not homogeneous
+
+multiplicity = 5
 
 ***********************************************************************
 
-7 Hilbert basis elements:
+8 Hilbert basis elements:
  0 0 1 0
  0 1 0 0
  1 0 0 0
  1 1 1 1
  1 1 2 2
- 1 2 3 3
+ 1 2 2 3
  1 2 3 4
+ 1 2 3 5
 
 4 extreme rays:
  1 0 0 0
  0 1 0 0
  0 0 1 0
- 1 2 3 4
+ 1 2 3 5
 
 4 support hyperplanes:
-  4  0  0 -1
-  0  2  0 -1
-  0  0  4 -3
+  5  0  0 -1
+  0  5  0 -2
+  0  0  5 -3
   0  0  0  1
+
+4 height 1 Hilbert basis elements:
+ 0 0 1 0
+ 0 1 0 0
+ 1 0 0 0
+ 1 2 3 5
 

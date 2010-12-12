@@ -1,5 +1,4 @@
 #!/usr/bin/perl 
-# Take each line of output file and find Hilbert basis
 
 
 # Makes sure that an input file is specifed
@@ -15,6 +14,7 @@ if (! open INPUT, "@ARGV[0]") {
 }
 
 # Iterates all the lines of the input file
+# Take each line find Hilbert basis
 while (<INPUT>) {
 	chomp;
 	system "touch temp/tempfile.in";
@@ -52,7 +52,6 @@ while (<INPUT>) {
 
 	# Find unimodular simplicies
 	
-	
 	# Create temp file for Sage commands
 	# Using a temp file makes Sage run faster
 	$SAGE_TEMPFILE = "temp.sage";
@@ -62,15 +61,15 @@ while (<INPUT>) {
 		close INPUT;
 		die "Trouble opening sage tempfile\n";		# error message
 	}
-	
-	
+		
 	# Array of every 4x4 matricies
 	@matrices;
 	@hilbertLineNumbers;
 
-	$count = 0;
+
 	# Take all 4x4 submatricies of the .gen matrix 
 	# Use Sage to find determinant
+	$count = 0;
 	for ($ix = 0; $ix < scalar(@hilbert_data); $ix++) {
 		for ($ij = $ix+1; $ij < scalar(@hilbert_data); $ij++) {
 			for ($iy = $ij+1; $iy < scalar(@hilbert_data); $iy++) {
@@ -260,13 +259,13 @@ while (<INPUT>) {
 				
 	}
 	
-#	printf "Solutions array is %d elements long\n", scalar(@solutions_array);
-#	printf "Equations array is %d elements long\n", scalar(@first_eq_array);
+	#	printf "Solutions array is %d elements long\n", scalar(@solutions_array);
+	#	printf "Equations array is %d elements long\n", scalar(@first_eq_array);
 
 	# Last entry in first equation is 1
 	push(@first_eq_array, 1);
 
-	printf "First equation %s\n", join(', ', @first_eq_array);
+	# printf "First equation %s\n", join(', ', @first_eq_array);
 
 	# Finds the interior facets of the simplicies
 		
@@ -287,61 +286,119 @@ while (<INPUT>) {
 		}
 	}
 
-	@currentFacet;
-	@currentUnimodular;
-	
-	# For each facet check if it is in a unimodular simplex
-	# use line numbers	
-	
-	for ($ix = 0; $ix < scalar(@facets); $ix++) {
-		@currentFacet = split(/,/, @facets[$ix]);
-		
-		for ($iy = 0; $iy < scalar(@unimodular_list); $iy++) {
-			@currentUnimodular = split(/,/, @unimodular_list[$iy]);
-			
-			$matchCount = 0;
-			for($ij = 0; $ij < scalar(@currentFacet); $ij++) {
-				for($ik = 0; $ik < scalar(@currentUnimodular); $ik++) {
-					if(@currentFacet[$ij] eq @currentUnimodular[$ik]) {
-						$matchCount++;	
-					}
-				}
-			}
-			
-			if($matchCount == 3) {
-				print "@currentUnimodular contains @currentFacet\n";				
-				# if the facet is in the unimodular simplex then
-				# check if it is interior
-			}
-			# if no interior trash
-			# if interior then 
-			# check sign
-			# if positive save 1
-			# if negative save -1
-			
-			# if the facet is not then
-			# save 0 in equation array							
+	@latte_equations;
 
+	# For each facet check if it is in a unimodular simplex
+	for ($ix = 0; $ix < scalar(@facets); $ix++) {
+		my @currentFacet = split(/,/, @facets[$ix]);
+		
+		my @facetEquation = ();
+		
+		# For each unimodular simplex check if it contains the facet
+		for ($iy = 0; $iy < scalar(@unimodular_list); $iy++) {
+			my @currentUnimodular = split(/,/, @unimodular_list[$iy]);
+			
+			# Checking if simplex contains facet
+			# Compute the difference between the facet and the unimodular
+			@difference = &difference(\@currentUnimodular, \@currentFacet);
+
+			# If the facet is in the unimodular simplex then check it it is interior and build equation
+			# The unimodular contains the difference if there is exactly one different element
+			if(scalar(@difference) == 1) {
+				# Create 3x4 array from original hilbert basis
+				my @subHilbertMatrix;
+				my $line1 = @hilbert_data[@currentFacet[0]];
+				chomp($line1);
+				my $line2 = @hilbert_data[@currentFacet[1]];
+				chomp($line2);
+				my $line3 = @hilbert_data[@currentFacet[2]];
+				chomp($line3);				
+				push(@subHilbertMatrix, split(/\s+/, $line1), split(/\s+/, $line2), split(/\s+/, $line3));
+				
+				# Find determinants of each 3x4 matrix
+				
+				# Builds 3x3 matrix from Sub-Hilbert basis matrix (3x4)
+				@det1 = (@subHilbertMatrix[1], @subHilbertMatrix[2], @subHilbertMatrix[3],
+						 @subHilbertMatrix[5], @subHilbertMatrix[6], @subHilbertMatrix[7],
+						 @subHilbertMatrix[9], @subHilbertMatrix[10], @subHilbertMatrix[11]);
+
+				@det2 = (@subHilbertMatrix[0], @subHilbertMatrix[2], @subHilbertMatrix[3],
+						 @subHilbertMatrix[4], @subHilbertMatrix[6], @subHilbertMatrix[7],
+						 @subHilbertMatrix[8], @subHilbertMatrix[10], @subHilbertMatrix[11]);
+
+				@det3 = (@subHilbertMatrix[0], @subHilbertMatrix[1], @subHilbertMatrix[3],
+						 @subHilbertMatrix[4], @subHilbertMatrix[5], @subHilbertMatrix[7],
+						 @subHilbertMatrix[8], @subHilbertMatrix[9], @subHilbertMatrix[11]);
+
+				@det4 = (@subHilbertMatrix[0], @subHilbertMatrix[1], @subHilbertMatrix[2],
+						 @subHilbertMatrix[4], @subHilbertMatrix[5], @subHilbertMatrix[6],
+						 @subHilbertMatrix[8], @subHilbertMatrix[9], @subHilbertMatrix[10]);
+				
+				# Builds commad
+				$command = join('',sprintf("M = MatrixSpace(QQ,3,3); A = M([%s]); print det(A);", join(',', @det1)),
+						   sprintf("M = MatrixSpace(QQ,3,3); A = M([%s]); print det(A);", join(',', @det2)),
+						   sprintf("M = MatrixSpace(QQ,3,3); A = M([%s]); print det(A);", join(',', @det3)),
+						   sprintf("M = MatrixSpace(QQ,3,3); A = M([%s]); print det(A);", join(',', @det4)));
+				
+				# Use Sage to find determinants
+				$command = "/Applications/sage/sage -c \"$command\"";
+				
+				chomp(my @det_vector = `$command`);
+
+				# Test if the facet is interior and what side of the facet the simplex lives on				
+				@current_hilbert = split(' ', @hilbert_data[@difference[0]]);
+				
+				$dot_product = (@det_vector[0] * @current_hilbert[0]) - (@det_vector[1] * @current_hilbert[1]) + (@det_vector[2] * @current_hilbert[2]) - (@det_vector[3] * @current_hilbert[3]);
+				
+				# Simplex lives on positive side
+				if( $dot_product > 0) {
+					push(@facetEquation, 1);
+				}
+				# Simplex lives on negative side
+				if( $dot_product < 0) {	
+					push(@facetEquation, -1);
+				}
+				
+			} else {		# Facet is not contained in simplex
+				push(@facetEquation, 0);
+			}
+			
+		}	
+		
+		# Test if facet is interior
+		# Iterate the eqation array
+		$has_positive = 0;
+		$has_negative = 0;
+		for($ij = 0; $ij < scalar(@facetEquation); $ij++) {
+			if(@facetEquation[$ij] < 0) {
+				$has_negative = 1;
+			}
+			
+			if(@facetEquation[$ij] > 0) {
+				$has_positive = 1;
+			}			
 		}
 		
+		# Facet is interior if coefficient are both postive and negative
+		# If coefficient are all postive or all negative then it is not interior
+		if($has_positive && $has_negative) {			
+			# Put 0 at end of equation
+			push(@facetEquation, 0);
+			
+			# Puts all submatricies in array
+			push(@latte_equations, join(',', @facetEquation));	
+		}
 		
+		print "Facet (@currentFacet) equation is @facetEquation (" . @facetEquation . ") long\n";
 	}
-	exit;
-	# at the end of each equation array save 0
 
-	# save first equation array and all other in one file of the form
-	# number of equations = i
-	# number of variables
+
+	# Latte temp file
+	# first line: number of equations
+	# second line: number of variables
 	# equations
-	# last line "linearity i 1, 2, 3, ..."
-
-
-	
-	
-
-
-	@int_facet_array;
-	
+	# last line: "linearity i 1, 2, 3, ..."
+		
 	# Create temp file for Latte equations
 	$LATTE_TEMPFILE = "temp.latte";
 	system "rm $LATTE_TEMPFILE";
@@ -350,21 +407,20 @@ while (<INPUT>) {
 		die "Trouble opening latte tempfile\n";		# error message
 	}
 	
-	printf LATTTE_INPUT_FILE "scalar(@int_facet_array)\nscalar(@unimodular_array)\n";
+	$number_of_equations = scalar(@latte_array) + 1;
+	@linearity;
+	for($ix = 0; $ix < scalar($number_of_equations); $ix++){
+		push(@linearity, $ix);
+	}
 	
-
+	printf LATTTE_INPUT_FILE "$number_of_equations\nscalar(@unimodular_array)\n@first_equation_array\n@latte_array\nlinearity $number_of_equations @linearity";
 	
-
-	
-	
-	
-	# use Latte for yes or no answer
+	# Use Latte for yes or no answer
 	# Is there a lattice point?  ./count int temp.latte
 
-	#system "/Applications/latte ./count int temp.latte";
-	#chomp($answer = 'answer')
+	system "/Applications/latte ./count int temp.latte";
+
 	# if no then keep hilbert_basis tempfile
-	#if (!$answer) 
 	
 	
 	
@@ -374,6 +430,15 @@ while (<INPUT>) {
 }
 
 close INPUT;
+
+sub difference {
+	my($array1, $array2) = @_;
+	my @diff;
+	for $i (@$array1) {
+		push(@diff, $i) if ! grep {$i == $_} @$array2;
+	}
+	return @diff;
+}
 
 
 
