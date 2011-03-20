@@ -1,0 +1,150 @@
+#!/usr/bin/env ruby 
+
+# == Synopsis 
+#   This command computes normal matrices with no modular triangulation.
+#
+# == Examples
+#   This command computes normal matrices with no modular triangulation.
+#     find_normal numbers.txt
+#
+#   Other examples:
+#     find_normal -q numbers.txt
+#     find_normal --verbose numbers.txt
+#
+# == Usage 
+#   find_normal [options] source_matrix_file
+#
+#   For help use: find_normal -h
+#
+# == Options
+#   -h, --help          Displays help message
+#   -v, --version       Display the version, then exit
+#   -q, --quiet         Output as little as possible, overrides verbose
+#   -V, --verbose       Verbose output
+#
+# == Author
+#   Ashley Shimabuku, Jeff Remer
+#
+# == Copyright
+#   Copyright (c) 2011 Ashley Shimabuku, Jeff Remer. Licensed under the MIT License:
+#   http://www.opensource.org/licenses/mit-license.php
+
+require 'optparse' 
+require 'rdoc/usage'
+require 'ostruct'
+require 'date'
+require 'lib/hilbert_basis.rb'
+
+
+class App
+  VERSION = '0.0.1'
+  
+  attr_reader :options
+
+  def initialize(arguments, stdin)
+    @arguments = arguments
+    @stdin = stdin
+    
+    # Set defaults
+    @options = OpenStruct.new
+    @options.verbose = false
+    @options.quiet = false
+  end
+
+  # Parse options, check arguments, then process the command
+  def run
+        
+    if parsed_options? && arguments_valid? 
+      
+      puts "Start at #{DateTime.now}\n\n" if @options.verbose
+      
+      output_options if @options.verbose # [Optional]
+            
+      process_arguments            
+      process_command
+      
+      puts "\nFinished at #{DateTime.now}" if @options.verbose
+      
+    else
+      output_usage
+    end
+      
+  end
+  
+  protected
+  
+    def parsed_options?
+      
+      # Specify options
+      opts = OptionParser.new 
+      opts.on('-v', '--version')    { output_version ; exit 0 }
+      opts.on('-h', '--help')       { output_help }
+      opts.on('-V', '--verbose')    { @options.verbose = true }  
+      opts.on('-q', '--quiet')      { @options.quiet = true }
+            
+      opts.parse!(@arguments) rescue return false
+      
+      process_options
+      true      
+    end
+
+    # Performs post-parse processing on options
+    def process_options
+      @options.verbose = false if @options.quiet
+    end
+    
+    def output_options
+      puts "Options:\n"
+      
+      @options.marshal_dump.each do |name, val|        
+        puts "  #{name} = #{val}"
+      end
+    end
+
+    # True if required arguments were provided
+    def arguments_valid?
+      true if @arguments.length == 1 && File.exists?(@arguments.first)
+    end
+    
+    # Setup the arguments
+    def process_arguments
+      @input_filename = @arguments.first
+    end
+    
+    def output_help
+      output_version
+      RDoc::usage() #exits app
+    end
+    
+    def output_usage
+      RDoc::usage('usage') # gets usage from comments above
+    end
+    
+    def output_version
+      puts "#{File.basename(__FILE__)} version #{VERSION}"
+    end
+    
+    def process_command
+      puts "Processing #{@input_filename}" if @options.verbose
+      IO.foreach(@input_filename){ |line| process_line(line)}
+    end
+    
+    def process_line(line)
+      # 1. For each line of the input numbers file find the hilbert basis
+      hilbert_basis = HilbertBasis.new(line)
+      hilbert_basis.find
+      
+      puts "Hilbert Basis:" if @options.verbose
+      puts hilbert_basis.basis.inspect if @options.verbose
+      
+      # 2. Find unimodular simplicies
+      unimodular_simplex_generator = UnimodularSimplexGenerator.new(hilbert_basis)
+      unimodular_simplices = unimodular_simplex_generator.generate
+      
+    end
+
+end
+
+# Create and run the application
+app = App.new(ARGV, STDIN)
+app.run
