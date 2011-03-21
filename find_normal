@@ -21,7 +21,7 @@ USAGE = <<-EOS
   -v, --version       Display the version, then exit
   -q, --quiet         Output as little as possible, overrides verbose
   -V, --verbose       Verbose output
-  -VV, --very-verbose Very verbose output
+  -X, --very-verbose Very verbose output
 
 == Author
   Ashley Shimabuku, Jeff Remer
@@ -88,7 +88,7 @@ class App
       opts.on('-v', '--version')          { output_version ; exit 0 }
       opts.on('-h', '--help')             { output_help }
       opts.on('-V', '--verbose')          { @options.verbose = true } 
-      opts.on('-VV', '--very-verbose')     { @options.very_verbose = true }   
+      opts.on('-X', '--very-verbose')     { @options.very_verbose = true }   
       opts.on('-q', '--quiet')            { @options.quiet = true }
             
       opts.parse!(@arguments) rescue return false
