@@ -1,0 +1,1 @@
+ruby1.9 -I lib -I test test/tests.rb

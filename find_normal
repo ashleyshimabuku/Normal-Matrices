@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby 
+#!/usr/bin/env ruby1.9 -I ./lib/
 
 # == Synopsis 
 #   This command computes normal matrices with no modular triangulation.
@@ -10,30 +10,36 @@
 #   Other examples:
 #     find_normal -q numbers.txt
 #     find_normal --verbose numbers.txt
-#
-# == Usage 
-#   find_normal [options] source_matrix_file
-#
-#   For help use: find_normal -h
-#
-# == Options
-#   -h, --help          Displays help message
-#   -v, --version       Display the version, then exit
-#   -q, --quiet         Output as little as possible, overrides verbose
-#   -V, --verbose       Verbose output
-#
-# == Author
-#   Ashley Shimabuku, Jeff Remer
-#
-# == Copyright
-#   Copyright (c) 2011 Ashley Shimabuku, Jeff Remer. Licensed under the MIT License:
-#   http://www.opensource.org/licenses/mit-license.php
+USAGE = <<-EOS
+== Usage 
+  find_normal [options] source_matrix_file
 
-require 'optparse' 
-require 'rdoc/usage'
+  For help use: find_normal -h
+
+== Options
+  -h, --help          Displays help message
+  -v, --version       Display the version, then exit
+  -q, --quiet         Output as little as possible, overrides verbose
+  -V, --verbose       Verbose output
+
+== Author
+  Ashley Shimabuku, Jeff Remer
+
+== Copyright
+  Copyright (c) 2011 Ashley Shimabuku, Jeff Remer. Licensed under the MIT License:
+  http://www.opensource.org/licenses/mit-license.php
+EOS
+
+require 'optparse'
 require 'ostruct'
 require 'date'
-require 'lib/hilbert_basis.rb'
+require 'array'
+require 'hilbert_basis'
+require 'unimodular_simplex_generator'
+require 'generic_point'
+require 'linear_system'
+require 'interior_facet_generator'
+require 'vertex_counter'
 
 
 class App
@@ -113,11 +119,13 @@ class App
     
     def output_help
       output_version
-      RDoc::usage() #exits app
+      puts USAGE
+      exit
     end
     
     def output_usage
-      RDoc::usage('usage') # gets usage from comments above
+      puts USAGE
+      exit
     end
     
     def output_version
@@ -130,19 +138,78 @@ class App
     end
     
     def process_line(line)
+      #########################################################################
       # 1. For each line of the input numbers file find the hilbert basis
+      #########################################################################
       hilbert_basis = HilbertBasis.new(line)
       hilbert_basis.find
       
       puts "Hilbert Basis:" if @options.verbose
       puts hilbert_basis.basis.inspect if @options.verbose
+      #########################################################################      
       
+      #########################################################################
       # 2. Find unimodular simplicies
+      #########################################################################
       unimodular_simplex_generator = UnimodularSimplexGenerator.new(hilbert_basis)
       unimodular_simplices = unimodular_simplex_generator.generate
+      #########################################################################      
+      
+      #########################################################################      
+      # 3. Create a generic point
+      #########################################################################
+      generic_point = GenericPoint.new(hilbert_basis).find
+      puts "Generic Point: #{generic_point}" if @options.verbose
+      #########################################################################      
+
+      #########################################################################      
+      # 4. Solve linear system for each unimodular simplex in order to build an equation
+      #########################################################################      
+      first_equation_coefficients = [1]
+      unimodular_simplices.each{|simplex|
+        linear_system = LinearSystem.new(simplex, generic_point)
+        solution = linear_system.solve
+        if solution.all_positive?
+          first_equation_coefficients.push(-1)
+        else
+          first_equation_coefficients.push(0)
+        end        
+      }
+      
+      puts "First Equation Coefficients: #{first_equation_coefficients}" if @options.verbose      
+      #########################################################################      
+
+      #########################################################################      
+      # 5. Find the interior facets of the hilbert basis
+      #########################################################################
+      interior_facet_generator = InteriorFacetGenerator.new(hilbert_basis)
+      interior_facets = interior_facet_generator.generate
+      
+      #########################################################################      
+      # 6. Finds the number of 0/1 verticies
+      #########################################################################      
+      vertex_counter = VertexCounter.new(first_equation_coefficients, interior_facets, hilbert_basis, unimodular_simplices)
+      vertex_count = vertex_counter.count
+      puts "Vertex count: #{vertex_count}" if @options.verbose
+
+      #########################################################################      
+      # 7. If statement
+      #########################################################################
+      
+      
+      
       
     end
 
+end
+
+class Matrix
+  def all_positive?
+    self.each {|v|
+      return false if v < 0
+    }
+    true
+  end
 end
 
 # Create and run the application

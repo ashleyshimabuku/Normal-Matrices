@@ -1,3 +1,6 @@
 require 'test/unit'
-require 'test/hilbert_basis_test'
-require 'test/unimodular_simplex_generator_test'
+require 'hilbert_basis_test'
+require 'unimodular_simplex_generator_test'
+require 'generic_point_test'
+require 'linear_system_test'
+require 'interior_facet_generator_test'
