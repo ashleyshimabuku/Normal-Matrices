@@ -45,7 +45,7 @@ class VertexCounter
       file.puts "end"
     }
         
-  	output = `azove -c count.ine 2>&1`;
+  	output = `azove2 -c count.ine 2>&1`;
   	
     vertices_count = /Number of 0\/1 vertices = (\d+)/.match(output).captures.first
     
