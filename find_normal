@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby1.9 -I ./lib/
+#!/usr/local/bin/ruby -I ./lib/
 
 # == Synopsis 
 #   This command computes normal matrices with no modular triangulation.
