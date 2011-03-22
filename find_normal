@@ -145,7 +145,7 @@ class App
         process_line(line)
         processed_count += 1
         percent_done = sprintf "%.2f", (processed_count / line_count.to_f) * 100
-        puts "Processed #{processed_count} of #{line_count} (#{percent_done}%)" if @options.verbose
+        puts "Processed #{processed_count} of #{line_count} (#{line}) (#{percent_done}%)" if @options.verbose
       }
     end
     
