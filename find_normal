@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby1.9 -I ./lib/
+#!/usr/local/bin/ruby -I ./lib/
 
 # == Synopsis 
 #   This command computes normal matrices with no modular triangulation.
@@ -21,6 +21,7 @@ USAGE = <<-EOS
   -v, --version       Display the version, then exit
   -q, --quiet         Output as little as possible, overrides verbose
   -V, --verbose       Verbose output
+  -X, --very-verbose Very verbose output
 
 == Author
   Ashley Shimabuku, Jeff Remer
@@ -54,6 +55,7 @@ class App
     # Set defaults
     @options = OpenStruct.new
     @options.verbose = false
+    @options.very_verbose = false
     @options.quiet = false
   end
 
@@ -64,7 +66,7 @@ class App
       
       puts "Start at #{DateTime.now}\n\n" if @options.verbose
       
-      output_options if @options.verbose # [Optional]
+      output_options if @options.verbose
             
       process_arguments            
       process_command
@@ -83,10 +85,11 @@ class App
       
       # Specify options
       opts = OptionParser.new 
-      opts.on('-v', '--version')    { output_version ; exit 0 }
-      opts.on('-h', '--help')       { output_help }
-      opts.on('-V', '--verbose')    { @options.verbose = true }  
-      opts.on('-q', '--quiet')      { @options.quiet = true }
+      opts.on('-v', '--version')          { output_version ; exit 0 }
+      opts.on('-h', '--help')             { output_help }
+      opts.on('-V', '--verbose')          { @options.verbose = true } 
+      opts.on('-X', '--very-verbose')     { @options.very_verbose = true }   
+      opts.on('-q', '--quiet')            { @options.quiet = true }
             
       opts.parse!(@arguments) rescue return false
       
@@ -97,6 +100,8 @@ class App
     # Performs post-parse processing on options
     def process_options
       @options.verbose = false if @options.quiet
+      @options.very_verbose = false if @options.quiet
+      @options.verbose = true if @options.very_verbose
     end
     
     def output_options
@@ -133,8 +138,15 @@ class App
     end
     
     def process_command
-      puts "Processing #{@input_filename}" if @options.verbose
-      IO.foreach(@input_filename){ |line| process_line(line)}
+      line_count = `wc -l < #{@input_filename}`.chomp.strip.to_i
+      processed_count = 0
+      puts "\nProcessing #{@input_filename}: #{line_count} total lines\n\n" if @options.verbose
+      IO.foreach(@input_filename){ |line|
+        process_line(line)
+        processed_count += 1
+        percent_done = sprintf "%.2f", (processed_count / line_count.to_f) * 100
+        puts "Processed #{processed_count} of #{line_count} (#{line.chomp}) (#{percent_done}%)" if @options.verbose
+      }
     end
     
     def process_line(line)
@@ -144,8 +156,8 @@ class App
       hilbert_basis = HilbertBasis.new(line)
       hilbert_basis.find
       
-      puts "Hilbert Basis:" if @options.verbose
-      puts hilbert_basis.basis.inspect if @options.verbose
+      puts "Hilbert Basis:" if @options.very_verbose
+      puts hilbert_basis.basis.inspect if @options.very_verbose
       #########################################################################      
       
       #########################################################################
@@ -159,7 +171,7 @@ class App
       # 3. Create a generic point that lives inside at least one of the unimodular simplices
       #########################################################################
       generic_point = GenericPoint.new(hilbert_basis).find
-      puts "Generic Point: #{generic_point}" if @options.verbose
+      puts "Generic Point: #{generic_point}" if @options.very_verbose
       #########################################################################      
 
       #########################################################################      
@@ -177,7 +189,7 @@ class App
         end        
       }
       
-      puts "First Equation Coefficients: #{first_equation_coefficients}" if @options.verbose      
+      puts "First Equation Coefficients: #{first_equation_coefficients}" if @options.very_verbose      
       #########################################################################      
 
       #########################################################################      
@@ -196,7 +208,7 @@ class App
       rescue
         puts "ERROR!!!"
       end
-
+      
       #########################################################################      
       # 7. If there are no 0/1 vertices then the hilbert basis has no unimodular triangulations
       # Save this hilbert basis and run tests on the possible weight vectors

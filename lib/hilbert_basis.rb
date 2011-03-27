@@ -1,7 +1,7 @@
 # Use Normaliz to find the hilbert basis of a matrix
 require 'matrix'
 class HilbertBasis
-  NORMALIZ_COMMAND = "/Applications/Normaliz/norm64 -f %s"
+  NORMALIZ_COMMAND = "norm64 -f %s"
   INPUT_FILENAME = "temp/tempfile.in"
   OUTPUT_FILENAME = "temp/tempfile.gen"
   
