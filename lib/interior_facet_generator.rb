@@ -1,3 +1,4 @@
+# Find the interior facets
 require 'array.rb'
 
 class InteriorFacetGenerator
@@ -8,7 +9,7 @@ class InteriorFacetGenerator
   
   def generate
     return @interior_facets if defined? @interior_facets
-    # Generate facets of length three for every combination of the hilbert basis line numbers
+    # Generate all possible facets by finding every 3 combination of the hilbert basis line numbers
     facets = create_all_facets
     # For each facet create a 4x3 matrix from the transpose of the 3x4 matrix for the line
     # numbers of the hilbert basis corresponding the facet's values
@@ -23,10 +24,10 @@ class InteriorFacetGenerator
         line_vector = Vector.elements(hilbert_basis_line, true)
         
         dot_product = f[:det_vector].inner_product line_vector
-        
+        # if the simplex is on the positive side of the facet save a 1
         if dot_product > 0
           test_equation.push(1)
-        elsif dot_product < 0
+        elsif dot_product < 0 # if on the negative side save a -1
           test_equation.push(-1)        
         end                    
       }

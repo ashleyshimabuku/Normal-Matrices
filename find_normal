@@ -149,21 +149,22 @@ class App
       #########################################################################      
       
       #########################################################################
-      # 2. Find unimodular simplicies
+      # 2. Find unimodular simplicies of the cone of the hilbert basis
       #########################################################################
       unimodular_simplex_generator = UnimodularSimplexGenerator.new(hilbert_basis)
       unimodular_simplices = unimodular_simplex_generator.generate
       #########################################################################      
       
       #########################################################################      
-      # 3. Create a generic point
+      # 3. Create a generic point that lives inside at least one of the unimodular simplices
       #########################################################################
       generic_point = GenericPoint.new(hilbert_basis).find
       puts "Generic Point: #{generic_point}" if @options.verbose
       #########################################################################      
 
       #########################################################################      
-      # 4. Solve linear system for each unimodular simplex in order to build an equation
+      # 4. Build the first equation for the configuration polytope
+      # sum x_i = 1 where x_i is a unimodualr simplex that contain the generic point
       #########################################################################      
       first_equation_coefficients = [1]
       unimodular_simplices.each{|simplex|
@@ -180,7 +181,7 @@ class App
       #########################################################################      
 
       #########################################################################      
-      # 5. Find the interior facets of the hilbert basis
+      # 5. Find the interior facets for the cone of the hilbert basis 
       #########################################################################
       interior_facet_generator = InteriorFacetGenerator.new(hilbert_basis)
       interior_facets = interior_facet_generator.generate
@@ -189,15 +190,60 @@ class App
       # 6. Finds the number of 0/1 verticies
       #########################################################################      
       vertex_counter = VertexCounter.new(first_equation_coefficients, interior_facets, hilbert_basis, unimodular_simplices)
-      vertex_count = vertex_counter.count
-      puts "Vertex count: #{vertex_count}" if @options.verbose
+      begin
+        vertex_count = vertex_counter.count
+        puts "Vertex count: #{vertex_count}" if @options.verbose
+      rescue
+        puts "ERROR!!!"
+      end
 
       #########################################################################      
-      # 7. If statement
+      # 7. If there are no 0/1 vertices then the hilbert basis has no unimodular triangulations
+      # Save this hilbert basis and run tests on the possible weight vectors
       #########################################################################
       
       
       
+      
+      
+      #########################################################################      
+      # 8. Use Macaulay2 to find the integer kernel of matrix
+      # The integer kernel gives the B matrix for the Gale Diagram
+      #########################################################################
+      
+      
+      
+      
+      #########################################################################      
+      # 9. Use Polymake to find the vertices of P_0
+      #########################################################################
+      
+      
+      
+      #########################################################################      
+      # 10. For each vertex find its corresponding supporting hyperplanes
+      #########################################################################
+      
+      
+      
+      
+      #########################################################################      
+      # 11. Find hilbert basis for each vertex
+      #########################################################################
+      
+      
+      
+      
+      #########################################################################      
+      # 12. Test the possible weight vectors to see if we get a monomial initial ideal
+      #########################################################################
+      # test the negative unit vectors 
+      # test the vertex hilbert basis row vectors 
+      
+      
+      #########################################################################      
+      # 13. Output all results to a file
+      #########################################################################
       
     end
 

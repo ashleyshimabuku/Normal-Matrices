@@ -1,3 +1,4 @@
+# Find a generic point that lives inside at least one unimodular simplex
 class GenericPoint
   def initialize(hilbert_basis)
     @hilbert_basis = hilbert_basis

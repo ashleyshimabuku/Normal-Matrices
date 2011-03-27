@@ -1,3 +1,4 @@
+# Solve a linear system Ax = b
 require 'matrix'
 
 class LinearSystem

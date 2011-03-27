@@ -1,3 +1,4 @@
+# Use Normaliz to find the hilbert basis of a matrix
 require 'matrix'
 class HilbertBasis
   NORMALIZ_COMMAND = "/Applications/Normaliz/norm64 -f %s"
@@ -20,6 +21,7 @@ class HilbertBasis
   
   protected
   
+    # Write input file in Normaliz format
     def build_matrix
       "4\n4\n1 0 0 0\n0 1 0 0\n0 0 1 0\n%s\nintegral_closure\n" %  @cone.split(/,/).join(' ')
     end
