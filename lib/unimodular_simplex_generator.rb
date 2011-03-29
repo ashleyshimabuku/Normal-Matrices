@@ -19,10 +19,6 @@ class UnimodularSimplexGenerator
       end
     }
     results
-    
-    # If the number of unimodular simplices is greater than ___ save hilbert basis and quit
-    #if Unimodualar_Simplex.to_a.length > MAX
-    
   end
   
   protected

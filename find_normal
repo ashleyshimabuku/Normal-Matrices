@@ -35,12 +35,16 @@ require 'optparse'
 require 'ostruct'
 require 'date'
 require 'array'
+require 'yaml'
+
 require 'hilbert_basis'
 require 'unimodular_simplex_generator'
 require 'generic_point'
 require 'linear_system'
 require 'interior_facet_generator'
 require 'vertex_counter'
+require 'kernel_matrix'
+require 'polytope'
 
 
 class App
@@ -51,6 +55,10 @@ class App
   def initialize(arguments, stdin)
     @arguments = arguments
     @stdin = stdin
+    
+    @output_dir = generate_output_dir_name
+    @error_file = "output/error_#{Time.now.to_i}.log"
+    Dir.mkdir("output") unless Dir.exists?("output")
     
     # Set defaults
     @options = OpenStruct.new
@@ -138,11 +146,16 @@ class App
     end
     
     def process_command
+      $VERBOSE=nil
       line_count = `wc -l < #{@input_filename}`.chomp.strip.to_i
       processed_count = 0
       puts "\nProcessing #{@input_filename}: #{line_count} total lines\n\n" if @options.verbose
       IO.foreach(@input_filename){ |line|
-        process_line(line)
+        begin
+          process_line(line)
+        rescue
+          log_error(line)
+        end
         processed_count += 1
         percent_done = sprintf "%.2f", (processed_count / line_count.to_f) * 100
         puts "Processed #{processed_count} of #{line_count} (#{line.chomp}) (#{percent_done}%)" if @options.verbose
@@ -165,6 +178,9 @@ class App
       #########################################################################
       unimodular_simplex_generator = UnimodularSimplexGenerator.new(hilbert_basis)
       unimodular_simplices = unimodular_simplex_generator.generate
+      # TODO
+      # If the number of unimodular simplices is greater than ___ save hilbert basis and quit
+      # if Unimodualar_Simplex.to_a.length > MAX
       #########################################################################      
       
       #########################################################################      
@@ -200,65 +216,92 @@ class App
       
       #########################################################################      
       # 6. Finds the number of 0/1 verticies
-      #########################################################################      
+      #########################################################################
+      
+      # TODO      
+      # Test to see what optimal time out is and implement timeout options
+      # so that we can process lots of numbers and set others aside
       vertex_counter = VertexCounter.new(first_equation_coefficients, interior_facets, hilbert_basis, unimodular_simplices)
-      begin
-        vertex_count = vertex_counter.count
-        puts "Vertex count: #{vertex_count}" if @options.verbose
-      rescue
-        puts "ERROR!!!"
-      end
+
+      vertex_count = vertex_counter.count.to_i
+      puts "Vertex count: #{vertex_count}" if @options.verbose
       
       #########################################################################      
       # 7. If there are no 0/1 vertices then the hilbert basis has no unimodular triangulations
-      # Save this hilbert basis and run tests on the possible weight vectors
       #########################################################################
-      
-      
-      
-      
+      # Return early if there are any 0/1 vertices or if there was an error
+      # TODO Uncomment!!!
+      # return if vertex_count > 0 or !defined?(vertex_count)
       
       #########################################################################      
       # 8. Use Macaulay2 to find the integer kernel of matrix
       # The integer kernel gives the B matrix for the Gale Diagram
       #########################################################################
-      
-      
-      
+      kernel_matrix = KernelMatrix.new(hilbert_basis)
+      kernel = kernel_matrix.find
       
       #########################################################################      
       # 9. Use Polymake to find the vertices of P_0
       #########################################################################
-      
-      
+      polytope = Polytope.new(kernel_matrix)
+      polytope.create
       
       #########################################################################      
       # 10. For each vertex find its corresponding supporting hyperplanes
       #########################################################################
-      
-      
-      
+      supporting_hyperplanes = polytope.find_supporting_hyperplanes
       
       #########################################################################      
       # 11. Find hilbert basis for each vertex
       #########################################################################
-      
-      
-      
-      
+      hyperplane_bases = supporting_hyperplanes.collect{ |plane|
+        basis = HilbertBasis.new(nil, plane)
+        basis.find_from_hyperplane
+        basis.basis
+      }
+                  
       #########################################################################      
-      # 12. Test the possible weight vectors to see if we get a monomial initial ideal
+      # 12. Output all results to a file
       #########################################################################
-      # test the negative unit vectors 
-      # test the vertex hilbert basis row vectors 
-      
-      
-      #########################################################################      
-      # 13. Output all results to a file
-      #########################################################################
-      
+      log_result(hilbert_basis.cone, hilbert_basis, hyperplane_bases)
+    end
+    
+    def generate_output_dir_name
+      ["output",Time.now.strftime("%Y_%m_%d_%H")].join('/')
+    end
+    MAX_OUTPUT_FILES_PER_DIR = 100
+    def dir_is_full?
+      (Dir.entries(@output_dir).size - 2) >= 100
+    end
+    def ensure_dir
+      if !defined?(@output_dir)
+        @output_dir = generate_output_dir_name
+      end
+      if(!Dir.exists?(@output_dir)) 
+        Dir.mkdir(@output_dir)
+        return
+      end
+      if(dir_is_full?)
+        @output_dir = generate_output_dir_name
+      end      
+    end
+    
+    def log_error(line)
+      File.open(@error_file, "a"){|file|
+        file.puts line.gsub("\n","")
+      }
     end
 
+    def log_result(cone, hilbert_basis, hyperplane_bases)
+      ensure_dir
+      
+      filename = "#{@output_dir}/log_#{cone.join('')}.txt"
+      
+      File.open(filename, "w"){ |file|
+        file.puts(hilbert_basis.basis)
+        file.puts(hyperplane_bases)
+      }
+    end
 end
 
 class Matrix
