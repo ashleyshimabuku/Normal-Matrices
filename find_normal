@@ -164,7 +164,8 @@ class App
     
     def process_line(line)
       #########################################################################
-      # 1. For each line of the input numbers file find the hilbert basis
+      # 1. For each line of the input numbers define C[a_1,a_2,a_3,a_4] and
+      # file find the hilbert basis
       #########################################################################
       hilbert_basis = HilbertBasis.new(line)
       hilbert_basis.find
@@ -184,7 +185,7 @@ class App
       #########################################################################      
       
       #########################################################################      
-      # 3. Create a generic point that lives inside at least one of the unimodular simplices
+      # 3. Create a generic point that lives inside A
       #########################################################################
       generic_point = GenericPoint.new(hilbert_basis).find
       puts "Generic Point: #{generic_point}" if @options.very_verbose

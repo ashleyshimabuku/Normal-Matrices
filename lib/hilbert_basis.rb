@@ -8,11 +8,14 @@ class HilbertBasis
   attr_reader :cone, :basis
   
   def initialize(cone, supporting_hyperplane=nil)
+    # if the input was C[a_1,a_2,a_3,a_4] output the hilbert basis
+    # if the input was the supporting hyperplanes output the hilbert basis of the normal cone
     @cone = cone.gsub("\n", "").split(/,/) unless cone.nil?
     @supporting_hyperplane = supporting_hyperplane
   end
   
   def find
+    # find the hilbert basis of C[a_1,a_2,a_3,a_4]
     return @basis if defined? @basis
     create_input_file_for_cone
     run_normalize
@@ -21,6 +24,7 @@ class HilbertBasis
   end
   
   def find_from_hyperplane
+    # find the hilbert basis of the normal cone of a vertex of P_0
     return @basis if defined? @basis
     create_input_file_for_hyperplane
     run_normalize
@@ -41,11 +45,13 @@ class HilbertBasis
         "integral_closure"].join("\n")
     end
     
+    # Write input file in Normaliz format
     def build_matrix_from_hyperplane
       matrix = [
         @supporting_hyperplane.size,        
         @supporting_hyperplane.first.size,
       ]
+      # the normal cone = {-b_i} where b_i is in Gale Diagram b_i is a supporting hyperplane of v
       @supporting_hyperplane.each {|row|
         reversed_signs = row.collect{|el| el * -1 }
         matrix.push(reversed_signs.to_a.join(' '))

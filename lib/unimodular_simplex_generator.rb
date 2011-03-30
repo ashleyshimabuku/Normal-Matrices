@@ -1,6 +1,6 @@
 # Find the unimodular simplices of the hilbert basis
 class UnimodularSimplexGenerator
-  VERTICES = 4
+  VERTICES = 4  # Variable to change for higher dimensions
   def initialize(hilbert_basis)
     @hilbert_basis = hilbert_basis
   end
@@ -9,6 +9,7 @@ class UnimodularSimplexGenerator
     results = []
     linenumbers = generate_linenumbers
     submatrices = generate_submatrices
+    # for each simplex find the determinant
     submatrices.each_index { |idx|
       linenumber = linenumbers[idx]
       submatrix = submatrices[idx]
@@ -28,6 +29,8 @@ class UnimodularSimplexGenerator
       @hilbert_basis.find.to_a.combination(VERTICES).collect{ |x|Matrix.rows(x)}
     end
     
+    # Generate all 4 combinations of the line numbers of the columns vectors of A
+    # these serve as reference points for later in the program
     def generate_linenumbers
       (0...@hilbert_basis.basis.to_a.size).to_a.combination(VERTICES).to_a
     end
