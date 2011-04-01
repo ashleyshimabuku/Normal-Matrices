@@ -21,7 +21,8 @@ USAGE = <<-EOS
   -v, --version       Display the version, then exit
   -q, --quiet         Output as little as possible, overrides verbose
   -V, --verbose       Verbose output
-  -X, --very-verbose Very verbose output
+  -X, --very-verbose  Very verbose output
+  -S, --S3            Upload results to S3
 
 == Author
   Ashley Shimabuku, Jeff Remer
