@@ -45,9 +45,13 @@ require 'linear_system'
 require 'interior_facet_generator'
 require 'vertex_counter'
 
+require 'aws/s3'
+include AWS::S3
+
 
 class App
   VERSION = '0.0.1'
+  S3BUCKET = 'normal_matrices'
   
   attr_reader :options
 
@@ -70,7 +74,7 @@ class App
   # Parse options, check arguments, then process the command
   def run
         
-    if parsed_options? && arguments_valid? 
+    if parsed_options? && arguments_valid?     
       
       puts "Start at #{DateTime.now}\n\n" if @options.verbose
       
@@ -98,6 +102,7 @@ class App
       opts.on('-V', '--verbose')          { @options.verbose = true } 
       opts.on('-X', '--very-verbose')     { @options.very_verbose = true }   
       opts.on('-q', '--quiet')            { @options.quiet = true }
+      opts.on('-S', '--S3')               { @options.s3 = true }      
             
       opts.parse!(@arguments) rescue return false
       
@@ -241,7 +246,7 @@ class App
       # 7. If there are no 0/1 vertices then the hilbert basis has no unimodular triangulations
       #########################################################################
       # Return early if there are any 0/1 vertices or if there was an error
-      return if vertex_count > 0 or !defined?(vertex_count)
+      #return if vertex_count > 0 or !defined?(vertex_count)
       
       #########################################################################      
       # 8. Output all results to a file
@@ -281,15 +286,37 @@ class App
       }
     end
 
-    def log_result(cone, hilbert_basis, prefix="log")
+    def log_result(cone, hilbert_basis)
       ensure_dir
       
-      filename = "#{@output_dir}/#{prefix}_#{cone.join('')}.yml"
+      filename = "#{@output_dir}/log_#{cone.join('')}.yml"
       
-      File.open(filename, "w"){ |file|
+      File.open(filename, 'w'){ |file|
         file.puts(hilbert_basis.basis.to_yaml)
       }
+      
+      begin
+        log_s3(filename) if @options.s3
+      rescue => e
+        puts "Error saving #{cone} result to S3 #{e}"
+      end
     end
+    
+    def log_s3(filename)
+      Base.establish_connection!(
+        :access_key_id     => ENV['AMAZON_ACCESS_KEY_ID'],
+        :secret_access_key => ENV['AMAZON_SECRET_ACCESS_KEY']
+      )
+
+      S3Object.store(
+        filename,
+        open(filename),
+        S3BUCKET,
+        :content_type => 'text/plain'
+      )          
+    end
+      
+      
     
 end
 
