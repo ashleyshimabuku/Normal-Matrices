@@ -53,6 +53,7 @@ include AWS::S3
 class App
   VERSION = '0.0.1'
   S3BUCKET = 'normal_matrices'
+  TEMP_DIR = 'temp'
   
   attr_reader :options
 
@@ -70,6 +71,9 @@ class App
     @options.verbose = false
     @options.very_verbose = false
     @options.quiet = false
+    
+    Dir.mkdir(TEMP_DIR) unless Dir.exists?(TEMP_DIR) 
+
   end
 
   # Parse options, check arguments, then process the command
@@ -247,7 +251,7 @@ class App
       # 7. If there are no 0/1 vertices then the hilbert basis has no unimodular triangulations
       #########################################################################
       # Return early if there are any 0/1 vertices or if there was an error
-      #return if vertex_count > 0 or !defined?(vertex_count)
+      return if vertex_count > 0 or !defined?(vertex_count)
       
       #########################################################################      
       # 8. Output all results to a file
@@ -259,9 +263,11 @@ class App
       ["output",Time.now.strftime("%Y_%m_%d_%H")].join('/')
     end
     MAX_OUTPUT_FILES_PER_DIR = 100
+    
     def dir_is_full?
-      (Dir.entries(@output_dir).size - 2) >= 100
+      (Dir.entries(@output_dir).size - 2) >= MAX_OUTPUT_FILES_PER_DIR
     end
+    
     def ensure_dir
       if !defined?(@output_dir)
         @output_dir = generate_output_dir_name
