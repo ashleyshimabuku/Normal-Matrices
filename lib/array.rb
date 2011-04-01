@@ -1,4 +1,5 @@
-# Test to see if all entries in an array are positive, negative or zero
+# Test to see if all entries in an array are 
+# positive, negative or zero
 class Array
   def all_positive?
     self.each {|v|

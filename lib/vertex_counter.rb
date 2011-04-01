@@ -8,7 +8,8 @@ class VertexCounter
   end
   
   # For each interior facet write an equation 
-  # 0 = sum x_i - sum x_j for x_i on the positive side and x_j on the negative side of the facet
+  # 0 = sum x_i - sum x_j for x_i on the positive side and 
+  # x_j on the negative side of the facet
   def count
     facet_equations = @facets.collect{|facet|
       facet_equation = [0]

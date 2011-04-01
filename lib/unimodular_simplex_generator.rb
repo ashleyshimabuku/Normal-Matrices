@@ -14,7 +14,7 @@ class UnimodularSimplexGenerator
       linenumber = linenumbers[idx]
       submatrix = submatrices[idx]
       determinant = submatrix.determinant
-      # If the determinant of the simplex is 1 or -1 then it is unimodular
+      # If the determinant is 1 or -1 then it is unimodular
       if determinant.abs == 1         
         results.push(UnimodularSimplex.new(submatrix, linenumber))
       end
@@ -26,10 +26,12 @@ class UnimodularSimplexGenerator
     
     # Generate all possible simplices
     def generate_submatrices
-      @hilbert_basis.find.to_a.combination(VERTICES).collect{ |x|Matrix.rows(x)}
+      @hilbert_basis.find.to_a.combination(VERTICES).collect{ 
+        |x|Matrix.rows(x)}
     end
     
-    # Generate all 4 combinations of the line numbers of the columns vectors of A
+    # Generate all 4 combinations of the line numbers of 
+    # the columns vectors of the hilbert basis
     # these serve as reference points for later in the program
     def generate_linenumbers
       (0...@hilbert_basis.basis.to_a.size).to_a.combination(VERTICES).to_a

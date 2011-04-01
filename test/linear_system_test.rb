@@ -1,4 +1,5 @@
 require 'test/unit'
+require 'array'
 require 'hilbert_basis'
 require 'unimodular_simplex_generator'
 require 'linear_system'

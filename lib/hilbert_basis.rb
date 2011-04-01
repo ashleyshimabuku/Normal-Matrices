@@ -8,8 +8,6 @@ class HilbertBasis
   attr_reader :cone, :basis
   
   def initialize(cone, supporting_hyperplane=nil)
-    # if the input was C[a_1,a_2,a_3,a_4] output the hilbert basis
-    # if the input was the supporting hyperplanes output the hilbert basis of the normal cone
     @cone = cone.gsub("\n", "").split(/,/) unless cone.nil?
     @supporting_hyperplane = supporting_hyperplane
   end
@@ -19,7 +17,9 @@ class HilbertBasis
     return @basis if defined? @basis
     create_input_file_for_cone
     run_normalize
-    array = IO.readlines(OUTPUT_FILENAME).collect{|line| line.chop!}[2..-1].collect{|x| x.split(/\s/).map{|s| s.to_i}}    
+    array = IO.readlines(OUTPUT_FILENAME).collect{
+      |line| line.chop!}[2..-1].collect{
+      |x| x.split(/\s/).map{|s| s.to_i}}    
     @basis = Matrix.rows(array)
   end
   
@@ -28,7 +28,9 @@ class HilbertBasis
     return @basis if defined? @basis
     create_input_file_for_hyperplane
     run_normalize
-    array = IO.readlines(OUTPUT_FILENAME).collect{|line| line.chop!}[2..-1].collect{|x| x.split(/\s/).map{|s| s.to_i}}    
+    array = IO.readlines(OUTPUT_FILENAME).collect{
+      |line| line.chop!}[2..-1].collect{
+      |x| x.split(/\s/).map{|s| s.to_i}}    
     @basis = Matrix.rows(array)
   end
   
@@ -51,7 +53,8 @@ class HilbertBasis
         @supporting_hyperplane.size,        
         @supporting_hyperplane.first.size,
       ]
-      # the normal cone = {-b_i} where b_i is in Gale Diagram b_i is a supporting hyperplane of v
+      # the normal cone = {-b_i} where b_i is in Gale Diagram
+      # b_i is a supporting hyperplane of v
       @supporting_hyperplane.each {|row|
         reversed_signs = row.collect{|el| el * -1 }
         matrix.push(reversed_signs.to_a.join(' '))
@@ -61,11 +64,13 @@ class HilbertBasis
     end
     
     def create_input_file_for_cone
-      File.open(INPUT_FILENAME, "w"){|file| file.puts build_matrix_from_cone}
+      File.open(INPUT_FILENAME, "w"){
+        |file| file.puts build_matrix_from_cone}
     end
     
     def create_input_file_for_hyperplane
-      File.open(INPUT_FILENAME, "w"){|file| file.puts build_matrix_from_hyperplane}
+      File.open(INPUT_FILENAME, "w"){
+        |file| file.puts build_matrix_from_hyperplane}
     end
     
     def run_normalize

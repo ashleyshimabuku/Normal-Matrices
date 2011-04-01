@@ -1,3 +1,4 @@
+# Find the P_0 polytope
 class Polytope
   INPUT_FILENAME = "temp/tempfile.polymake"
   POLYMAKE_COMMAND = "polymake %s VERTICES"
@@ -21,8 +22,8 @@ class Polytope
     # for each vertex find dot product with each row of kernel_matrix
     # collect them into sets of hyperplanes        
     @vertices.row_vectors.collect{|polytope_row| 
-      kernel_rows = @kernel_matrix.kernel.row_vectors.select{ |kernel_row|
-        polytope_row.inner_product(kernel_row) == -1
+      kernel_rows = @kernel_matrix.kernel.row_vectors.select{ 
+        |kernel_row| polytope_row.inner_product(kernel_row) == -1
       }
     }
   end
@@ -31,7 +32,8 @@ class Polytope
 
     # Write input file in Polymake format
     def build_matrix
-      @kernel_matrix.find.to_a.collect{|row| "1 #{row.join(" ")}"}.join("\n")
+      @kernel_matrix.find.to_a.collect{
+        |row| "1 #{row.join(" ")}"}.join("\n")
     end
 
     def create_input_file
