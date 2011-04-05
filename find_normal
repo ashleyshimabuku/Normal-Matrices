@@ -23,6 +23,8 @@ USAGE = <<-EOS
   -V, --verbose       Verbose output
   -X, --very-verbose  Very verbose output
   -S, --S3            Upload results to S3
+  -L, --limit LIMIT   Skip if the number of simplices exceeds LIMIT
+  -T, --timeout T     Skip if enumerating the vertices exceeds T seconds
 
 == Author
   Ashley Shimabuku, Jeff Remer
@@ -49,7 +51,6 @@ require 'vertex_counter'
 require 'aws/s3'
 include AWS::S3
 
-
 class App
   VERSION = '0.0.1'
   S3BUCKET = 'normal_matrices'
@@ -71,6 +72,8 @@ class App
     @options.verbose = false
     @options.very_verbose = false
     @options.quiet = false
+    @options.limit = 1000
+    @options.timeout = 300
     
     Dir.mkdir(TEMP_DIR) unless Dir.exists?(TEMP_DIR) 
 
@@ -101,16 +104,20 @@ class App
     def parsed_options?
       
       # Specify options
-      opts = OptionParser.new 
-      opts.on('-v', '--version')          { output_version ; exit 0 }
-      opts.on('-h', '--help')             { output_help }
-      opts.on('-V', '--verbose')          { @options.verbose = true } 
-      opts.on('-X', '--very-verbose')     { @options.very_verbose = true }   
-      opts.on('-q', '--quiet')            { @options.quiet = true }
-      opts.on('-S', '--S3')               { @options.s3 = true }      
-            
-      opts.parse!(@arguments) rescue return false
-      
+      OptionParser.new do |opts|
+        opts.on('-v', '--version')          { output_version ; exit 0 }
+        opts.on('-h', '--help')             { output_help }
+        opts.on('-V', '--verbose')          { @options.verbose = true } 
+        opts.on('-X', '--very-verbose')     { @options.very_verbose = true }   
+        opts.on('-q', '--quiet')            { @options.quiet = true }
+        opts.on('-S', '--S3')               { @options.s3 = true }
+        opts.on('-L', '--limit [LIMIT]')   {|limit|
+          @options.limit = limit.to_i
+        }
+        opts.on('-T', '--timeout [T]') {|timeout|
+          @options.timeout = timeout.to_i
+        }
+      end.parse!(@arguments) rescue return false
       process_options
       true      
     end
@@ -193,7 +200,7 @@ class App
       puts "Number of Unimodular Simplices #{unimodular_simplices.to_a.size}" if @options.verbose
       
       # If the number of unimodular simplices is greater than 1000 save hilbert basis and quit      
-      if unimodular_simplices.to_a.size > 1000 or !defined?(unimodular_simplices)
+      if unimodular_simplices.to_a.size > @options.limit or !defined?(unimodular_simplices)
         log_timeout(line)
         return
       end
@@ -237,7 +244,7 @@ class App
       # Time out method for 5 minutes
       vertex_count = 1.0/0
       begin
-        Timeout::timeout(300) do |timeout_length|
+        Timeout::timeout(@options.timeout) do |timeout_length|
           vertex_counter = VertexCounter.new(first_equation_coefficients, interior_facets, hilbert_basis, unimodular_simplices)
           vertex_count = vertex_counter.count.to_i
           puts "Vertex count: #{vertex_count}" if @options.verbose
