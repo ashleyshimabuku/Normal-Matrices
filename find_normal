@@ -25,6 +25,7 @@ USAGE = <<-EOS
   -S, --S3            Upload results to S3
   -L, --limit LIMIT   Skip if the number of simplices exceeds LIMIT
   -T, --timeout T     Skip if enumerating the vertices exceeds T seconds
+  -O, --ouptut DIR    Base output directory
 
 == Author
   Ashley Shimabuku, Jeff Remer
@@ -61,12 +62,7 @@ class App
   def initialize(arguments, stdin)
     @arguments = arguments
     @stdin = stdin
-    
-    @output_dir = generate_output_dir_name
-    @error_file = "output/error_#{Time.now.to_i}.log"
-    @timeout_file = "output/timeout_#{Time.now.to_i}.log"
-    Dir.mkdir("output") unless Dir.exists?("output")
-    
+
     # Set defaults
     @options = OpenStruct.new
     @options.verbose = false
@@ -74,6 +70,7 @@ class App
     @options.quiet = false
     @options.limit = 1000
     @options.timeout = 300
+    @options.outputdir = "output"    
     
     Dir.mkdir(TEMP_DIR) unless Dir.exists?(TEMP_DIR) 
 
@@ -83,6 +80,10 @@ class App
   def run
         
     if parsed_options? && arguments_valid?     
+      @output_dir = generate_output_dir_name
+      @error_file = "#{@options.outputdir}/error_#{Time.now.to_i}.log"
+      @timeout_file = "#{@options.outputdir}/timeout_#{Time.now.to_i}.log"
+      Dir.mkdir(@options.outputdir) unless Dir.exists?(@options.outputdir)
       
       puts "Start at #{DateTime.now}\n\n" if @options.verbose
       
@@ -117,6 +118,9 @@ class App
         opts.on('-T', '--timeout [T]') {|timeout|
           @options.timeout = timeout.to_i
         }
+        opts.on('-O', '--output [OUTPUT]')   {|output|
+          @options.outputdir = output
+        }        
       end.parse!(@arguments) rescue return false
       process_options
       true      
@@ -267,7 +271,7 @@ class App
     end
     
     def generate_output_dir_name
-      ["output",Time.now.strftime("%Y_%m_%d_%H")].join('/')
+      [@options.outputdir,Time.now.strftime("%Y_%m_%d_%H")].join('/')
     end
     MAX_OUTPUT_FILES_PER_DIR = 100
     
