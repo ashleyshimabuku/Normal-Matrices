@@ -192,6 +192,7 @@ class App
       #########################################################################
       hilbert_basis = HilbertBasis.new(line)
       hilbert_basis.find
+      puts "Line: #{line}" if @options.verbose
       
       #########################################################################      
       
@@ -203,7 +204,7 @@ class App
       
       puts "Number of Unimodular Simplices #{unimodular_simplices.to_a.size}" if @options.verbose
       
-      # If the number of unimodular simplices is greater than 1000 save hilbert basis and quit      
+      # If the number of unimodular simplices is greater than limit save hilbert basis and quit      
       if unimodular_simplices.to_a.size > @options.limit or !defined?(unimodular_simplices)
         log_timeout(line)
         return
@@ -245,7 +246,7 @@ class App
       # 6. Finds the number of 0/1 verticies
       #########################################################################
       
-      # Time out method for 5 minutes
+      # Time out method 
       vertex_count = 1.0/0
       begin
         Timeout::timeout(@options.timeout) do |timeout_length|
@@ -262,7 +263,8 @@ class App
       # 7. If there are no 0/1 vertices then the hilbert basis has no unimodular triangulations
       #########################################################################
       # Return early if there are any 0/1 vertices or if there was an error
-      return if vertex_count > 0 or !defined?(vertex_count)
+      # Azove2 returns at least 1 vertex
+      return if vertex_count > 1 or !defined?(vertex_count)
       
       #########################################################################      
       # 8. Output all results to a file
