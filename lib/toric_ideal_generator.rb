@@ -9,14 +9,10 @@ class ToricIdealGenerator
     @normal_matrix = hilbert_basis.find.transpose
     @term_order = term_order
   end
-  
+
+  # find toric ideal of the normal matrix  
   def find
     return @toric_ideal if defined? @toric_ideal
-    # find toric ideal of the normal matrix
-    
-    # for term order create cost file
-    # 1 length of term order
-    # term order
     create_cost_file
     create_input_file
     run_groebner

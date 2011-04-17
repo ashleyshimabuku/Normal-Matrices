@@ -139,11 +139,6 @@ class App
     end
     
     
-    
-    
-    #TODO
-    # change to input hilbert basis not just one line of a file
-    #
     def process_command
       $VERBOSE=nil
       line_count = `wc -l < #{@input_filename}`.chomp.strip.to_i
@@ -160,13 +155,6 @@ class App
         puts "Processed #{processed_count} of #{line_count} (#{line.chomp}) (#{percent_done}%)" if @options.verbose
       }
     end
-    #
-    # array = IO.readlines(INPUT_FILENAME).collect{
-       # |line| line.chop!}[2..-1].collect{
-      #  |x| x.split(/\s/).map{|s| s.to_i}}    
-     # @normal_matrix = Matrix.rows(array)
-    #
-   
    
    
     def process_line(line)
@@ -212,8 +200,6 @@ class App
       #########################################################################      
       # 6. Generate term orders
       
-      # for each line v of the basis, use Sage to solve [b_i] lambda = v
-      # where b_i generate the cone
       term_order_batch = TermOrderBatch.new
       
       hyperplane_bases.zip(supporting_hyperplanes).each { |basis, support|
@@ -229,7 +215,7 @@ class App
       #########################################################################      
       # 7. Using possible term orders generate toric ideal 
       # then find initial ideals of I_A
-      # and find if they are monomial initial ideals
+      # and check if they are monomial
       #########################################################################
 
       # Use 4ti2 to find toric ideal for A
@@ -245,8 +231,8 @@ class App
           {:positive => positive, :negative => negative}
         }
 
-        # if dot products are equal then not monomial - save hyperplane_bases with no
-        # if dot products are not equal then monomial - save hyperplane_bases with yes
+        # if dot products are equal then not monomial - save term order with no
+        # if dot products are not equal then monomial - save term order with yes
         monomial = true
         exponent_vectors.each{|exp_vector|
           # positive

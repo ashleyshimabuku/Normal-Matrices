@@ -53,6 +53,8 @@ class TermOrder
     @hilbert_basis = hilbert_basis
   end
   
+  # for each line v of the basis, use Sage to solve [b_i] solution = v
+  # where b_i generate the cone
   def find(result)
     @term_order if defined? @term_order
     
@@ -60,19 +62,13 @@ class TermOrder
     denominators = result.collect{|r| r.denominator}
     multiplier = lcm(*denominators)
     solution = result.collect{|el| (el * multiplier).to_i}
-    
-    kernel_matrix_indices = @supporting_hyperplane.collect{|row|
-      @kernel_matrix.find.to_a.index(row)
-    }
-    
-    @term_order = []  
-    
-    solution.each_index{|idx|
-        if kernel_matrix_indices.index(idx)
-          @term_order << solution[idx]
-        else
-          @term_order << 0
-        end
+
+    @term_order = Array.new(@hilbert_basis.basis.row_vectors.size)  {|idx|
+      if @supporting_hyperplane.include?(@kernel_matrix[idx])
+        solution[@supporting_hyperplane.index(@kernel_matrix[idx])]
+      else
+        0
+      end
     }
     
     while @term_order.size < @hilbert_basis.basis.row_vectors.size
