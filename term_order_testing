@@ -32,8 +32,12 @@ require 'optparse'
 require 'ostruct'
 require 'date'
 require 'array'
-require 'yaml'require 'kernel_matrix'
+require 'yaml'
+require 'kernel_matrix'
 require 'polytope'
+require 'hilbert_basis'
+require 'toric_ideal_generator'
+require 'term_order'
 
 
 class App
@@ -45,9 +49,9 @@ class App
     @arguments = arguments
     @stdin = stdin
     
-    @output_dir = generate_output_dir_name
-    @error_file = "output/error_#{Time.now.to_i}.log"
     Dir.mkdir("output") unless Dir.exists?("output")
+    @output_dir = "output/termorder"
+    Dir.mkdir(@output_dir) unless Dir.exists?(@output_dir)
     
     # Set defaults
     @options = OpenStruct.new
@@ -146,11 +150,11 @@ class App
       processed_count = 0
       puts "\nProcessing #{@input_filename}: #{line_count} total lines\n\n" if @options.verbose
       IO.foreach(@input_filename){ |line|
-        begin
+#        begin
           process_line(line)
-        rescue
-          log_error(line)
-        end
+#        rescue
+#          log_error(line)
+#        end
         processed_count += 1
         percent_done = sprintf "%.2f", (processed_count / line_count.to_f) * 100
         puts "Processed #{processed_count} of #{line_count} (#{line.chomp}) (#{percent_done}%)" if @options.verbose
@@ -166,56 +170,98 @@ class App
    
    
     def process_line(line)
+      fname = line.gsub("\n",'').split(',').join('_')
+      outputfilename = "#{@output_dir}/#{fname}.txt"
+      File.open(outputfilename, "w") do |file|
+        file.puts "Cone: #{line}"
+      end
       #########################################################################
-      
-      # Find transpose of input hilbert basis
-      normal_matrix = line.to_a.transpose
+      # 1. For each line of the input numbers define C[a_1,a_2,a_3,a_4] and
+      # file find the hilbert basis
+      #########################################################################
+      hilbert_basis = HilbertBasis.new(line)
+      hilbert_basis.find
       
       #########################################################################      
-      # 1. Use Macaulay2 to find the integer kernel of matrix
+      # 2. Use Macaulay2 to find the integer kernel of matrix
       # The integer kernel gives the B matrix for the Gale Diagram
       #########################################################################
-      kernel_matrix = KernelMatrix.new(normal_matrix)
+      kernel_matrix = KernelMatrix.new(hilbert_basis)
       kernel = kernel_matrix.find
 
       #########################################################################      
-      # 2. Use Polymake to find the vertices of P_0
+      # 3. Use Polymake to find the vertices of P_0
       #########################################################################
       polytope = Polytope.new(kernel_matrix)
       polytope.create
 
       #########################################################################      
-      # 3. For each vertex find its corresponding supporting hyperplanes
+      # 4. For each vertex find its corresponding supporting hyperplanes
       #########################################################################
       supporting_hyperplanes = polytope.find_supporting_hyperplanes
 
       #########################################################################      
-      # 4. Find hilbert basis for each vertex
+      # 5. Find hilbert basis for each vertex
       #########################################################################
       hyperplane_bases = supporting_hyperplanes.collect{ |plane|
         basis = HilbertBasis.new(nil, plane)
         basis.find_from_hyperplane
         basis.basis
       }
+      
+      #########################################################################      
+      # 6. Generate term orders
+      
+      # for each line v of the basis, use Sage to solve [b_i] lambda = v
+      # where b_i generate the cone
+      term_order_batch = TermOrderBatch.new
+      
+      hyperplane_bases.zip(supporting_hyperplanes).each { |basis, support|
+        basis.row_vectors.each{ |row|
+          term_order_batch << TermOrder.new(row, support.collect{|r| r.to_a}, kernel_matrix, hilbert_basis)
+        }
+      }
+      
+      term_orders = term_order_batch.run.collect{|term_order| term_order.term_order}
+      # Generate unit vectors
+      term_orders.push(*Matrix.diagonal(*term_orders.first.size.times.collect{|x| -1}).to_a)
 
       #########################################################################      
-      # 5. Use Macaualy2 to find toric ideal for A
-      #########################################################################
-      toric = Toric_Ideal_Generator.new(normal_matrix)
-      toric_ideal = toric.find
-
-      #########################################################################      
-      # 6. Using possible term orders find initial ideals of I_A
+      # 7. Using possible term orders generate toric ideal 
+      # then find initial ideals of I_A
       # and find if they are monomial initial ideals
       #########################################################################
-      
 
-      
-      #########################################################################      
-      # 7. Output results
-      #########################################################################
-      
-      # output normal_matrix, term orders and correspoding initial ideal's yes or no
+      # Use 4ti2 to find toric ideal for A
+      term_orders.each{|term_order|
+        toric = ToricIdealGenerator.new(hilbert_basis, term_order)
+        toric_ideal = toric.find
+
+        # seperate into positives and negatives but keep placement
+        # (-1,2,3,-4) becomes (0,2,3,0) and (1,0,0,4) store in same row        
+        exponent_vectors = toric_ideal.row_vectors.collect{|row|
+          positive = row.collect{|el| el > 0 ? el : 0}
+          negative = row.collect{|el| el < 0 ? el.abs : 0}
+          {:positive => positive, :negative => negative}
+        }
+
+        # if dot products are equal then not monomial - save hyperplane_bases with no
+        # if dot products are not equal then monomial - save hyperplane_bases with yes
+        monomial = true
+        exponent_vectors.each{|exp_vector|
+          # positive
+          dot_positive = Vector.elements(exp_vector[:positive]).inner_product Vector.elements(term_order)
+          # negative
+          dot_negative = Vector.elements(exp_vector[:negative]).inner_product Vector.elements(term_order)
+          
+          monomial = false if dot_positive == dot_negative            
+        }
+        
+        # Output
+        File.open(outputfilename, "a") do |file|
+          file.puts "Term order: [#{term_order.join(', ')}] - monomial: #{monomial}" if @options.verbose
+        end
+      }
 
     end
 

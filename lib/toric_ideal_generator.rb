@@ -1,30 +1,53 @@
 # Find toric ideal of A
 class ToricIdealGenerator
-  MACAULAY2_COMMAND = "groebner %s"
-  INPUT_FILENAME = "temp/tempfile.mat"
-  OUTPUT_FILENAME = "temp/tempfile.gro"
+  GROEBNER_COMMAND = "groebner temp/foo"
+  INPUT_FILENAME = "temp/foo.mat"
+  COST_FILENAME = "temp/foo.cost"
+  OUTPUT_FILENAME = "temp/foo.gro"
   
-  def initialize(normal_matrix)
-    @normal_matrix = normal_matrix
+  def initialize(hilbert_basis, term_order)
+    @normal_matrix = hilbert_basis.find.transpose
+    @term_order = term_order
   end
   
   def find
-    # find toric ideal of the normal matrix
     return @toric_ideal if defined? @toric_ideal
+    # find toric ideal of the normal matrix
+    
+    # for term order create cost file
+    # 1 length of term order
+    # term order
+    create_cost_file
     create_input_file
-    run_macaulay2
-    array = IO.readlines(OUTPUT_FILENAME).collect{
-      |line| line.chop!}[2..-1].collect{
-      |x| x.split(/\s/).map{|s| s.to_i}}    
+    run_groebner
+
+    array = IO.readlines(OUTPUT_FILENAME)[1..-1]
+    
+    array.collect!{ |line|
+      line.split(' ').collect{|el| el.to_i}
+    }
+    
     @toric_ideal = Matrix.rows(array)
   end
 
   def create_input_file
-    File.open(INPUT_FILENAME, "w"){|file| file.puts }
+    File.open(INPUT_FILENAME, "w"){|file|      
+      file.puts "#{@normal_matrix.row_size} #{@normal_matrix.column_vectors.size}"
+      @normal_matrix.row_vectors.each {|row|
+        file.puts row.to_a.join(' ')
+      }
+    }
   end
 
-  def run_macaulay2
+  def create_cost_file
+    File.open(COST_FILENAME, "w"){|file|
+      file.puts "1 #{@term_order.size}"
+      file.puts @term_order.join(' ')
+    }
+  end
+  
+  def run_groebner
     $VERBOSE=nil
-    system(MACAULAY2_COMMAND % INPUT_FILENAME)
+    system(GROEBNER_COMMAND % INPUT_FILENAME)
   end      
 end
