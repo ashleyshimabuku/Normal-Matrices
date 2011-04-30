@@ -13,7 +13,7 @@ class HilbertBasis
   end
   
   def find
-    # find the hilbert basis of C[a_1,a_2,a_3,a_4]
+    # find the hilbert basis of C[a_1,a_2,a_3,a_4,a_5]
     return @basis if defined? @basis
     create_input_file_for_cone
     run_normalize
@@ -38,11 +38,12 @@ class HilbertBasis
   
     # Write input file in Normaliz format
     def build_matrix_from_cone
-      [ "4",
-        "4",
-        "1 0 0 0",
-        "0 1 0 0",
-        "0 0 1 0",
+      [ "5",
+        "5",
+        "1 0 0 0 0",
+        "0 1 0 0 0",
+        "0 0 1 0 0",
+        "0 0 0 1 0",
         @cone.join(' '),
         "integral_closure"].join("\n")
     end

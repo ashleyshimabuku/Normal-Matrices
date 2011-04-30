@@ -1,6 +1,6 @@
 # Find the unimodular simplices of the hilbert basis
 class UnimodularSimplexGenerator
-  VERTICES = 4  # Variable to change for higher dimensions
+  VERTICES = 5  # Variable to change for higher dimensions
   def initialize(hilbert_basis)
     @hilbert_basis = hilbert_basis
   end

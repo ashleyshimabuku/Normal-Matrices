@@ -68,7 +68,7 @@ class App
     @options.verbose = false
     @options.very_verbose = false
     @options.quiet = false
-    @options.limit = 1000
+    @options.limit = 5000
     @options.timeout = 300
     @options.outputdir = "output"    
     
@@ -187,7 +187,7 @@ class App
     def process_line(line)      
       
       #########################################################################
-      # 1. For each line of the input numbers define C[a_1,a_2,a_3,a_4] and
+      # 1. For each line of the input numbers define C[a_1,a_2,a_3,a_4,a_5] and
       # file find the hilbert basis
       #########################################################################
       hilbert_basis = HilbertBasis.new(line)
@@ -201,7 +201,6 @@ class App
       #########################################################################
       unimodular_simplex_generator = UnimodularSimplexGenerator.new(hilbert_basis)
       unimodular_simplices = unimodular_simplex_generator.generate
-      
       puts "Number of Unimodular Simplices #{unimodular_simplices.to_a.size}" if @options.verbose
       
       # If the number of unimodular simplices is greater than limit save hilbert basis and quit      

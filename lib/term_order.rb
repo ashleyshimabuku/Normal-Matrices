@@ -36,9 +36,9 @@ class TermOrderBatch
 
   protected  
     def format_command(rows, columns, basis, vector)
-        basis = basis.transpose
-        vector = vector.to_a
-        "M = MatrixSpace(QQ,#{columns},#{rows}); A = M(#{basis}); V = VectorSpace(QQ,#{columns});b = V(#{vector}); print octave.solve_linear_system(A,b);"
+      basis = Matrix.rows(basis.transpose).collect{|el| el*-1}.to_a
+      vector = vector.to_a
+      "M = MatrixSpace(QQ,#{columns},#{rows}); A = M(#{basis}); V = VectorSpace(QQ,#{columns});b = V(#{vector}); print octave.solve_linear_system(A,b);"
     end
   
 end
@@ -63,17 +63,16 @@ class TermOrder
     multiplier = lcm(*denominators)
     solution = result.collect{|el| (el * multiplier).to_i}
 
+    puts "solution: #{solution}"
+    
     @term_order = Array.new(@hilbert_basis.basis.row_vectors.size)  {|idx|
-      if @supporting_hyperplane.include?(@kernel_matrix[idx])
-        solution[@supporting_hyperplane.index(@kernel_matrix[idx])]
+      if @supporting_hyperplane.include?(@kernel_matrix.kernel.to_a[idx])
+        solution[@supporting_hyperplane.index(@kernel_matrix.kernel.to_a[idx])]
       else
         0
       end
     }
     
-    while @term_order.size < @hilbert_basis.basis.row_vectors.size
-      @term_order << 0
-    end
     
     @term_order
   end
