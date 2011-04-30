@@ -308,7 +308,7 @@ class App
     def log_result(cone, hilbert_basis)
       ensure_dir
       
-      filename = "#{@output_dir}/log_#{cone.join('')}.yml"
+      filename = "#{@output_dir}/log_#{cone.join('_')}.yml"
       
       File.open(filename, 'w'){ |file|
         file.puts(hilbert_basis.basis.to_yaml)
