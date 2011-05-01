@@ -64,8 +64,8 @@ class TermOrder
     solution = result.collect{|el| (el * multiplier).to_i}
 
     @term_order = Array.new(@hilbert_basis.basis.row_vectors.size)  {|idx|
-      if @supporting_hyperplane.include?(@kernel_matrix.kernel.row_vectors[idx])
-        solution[@supporting_hyperplane.index(@kernel_matrix.kernel.row_vectors[idx])]
+      if @supporting_hyperplane.include?(@kernel_matrix.kernel.to_a[idx])
+        solution[@supporting_hyperplane.index(@kernel_matrix.kernel.to_a[idx])]
       else
         0
       end
