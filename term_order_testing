@@ -38,7 +38,7 @@ require 'polytope'
 require 'hilbert_basis'
 require 'toric_ideal_generator'
 require 'term_order'
-
+require 'timeout'
 
 class App
   VERSION = '0.0.1'
@@ -240,12 +240,18 @@ class App
             # if dot products are not equal then monomial - save term order with yes
             monomial = true
             exponent_vectors.each{|exp_vector|
-              # positive
-              dot_positive = Vector.elements(exp_vector[:positive]).inner_product Vector.elements(term_order)
-              # negative
-              dot_negative = Vector.elements(exp_vector[:negative]).inner_product Vector.elements(term_order)
-          
-              monomial = false if dot_positive == dot_negative            
+              begin
+                # positive
+                dot_positive = Vector.elements(exp_vector[:positive]).inner_product Vector.elements(term_order)
+                # negative
+                dot_negative = Vector.elements(exp_vector[:negative]).inner_product Vector.elements(term_order)
+
+                monomial = false if dot_positive == dot_negative            
+              rescue => e
+                File.open(outputfilename, "a") do |file|
+                  file.puts "Term order: [#{term_order.join(', ')}] - error" if @options.verbose
+                end
+              end
             }
         
             # Output
