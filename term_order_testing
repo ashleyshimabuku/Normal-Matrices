@@ -58,6 +58,7 @@ class App
     @options.verbose = false
     @options.very_verbose = false
     @options.quiet = false
+    @options.timeout = 1200
   end
 
   # Parse options, check arguments, then process the command
@@ -218,37 +219,44 @@ class App
       # and check if they are monomial
       #########################################################################
 
+      # Timeout method
+      begin
+        Timeout::timeout(@options.timeout) do |timeout_length|
+
       # Use 4ti2 to find toric ideal for A
-      term_orders.each{|term_order|
-        toric = ToricIdealGenerator.new(hilbert_basis, term_order)
-        toric_ideal = toric.find
+          term_orders.each{|term_order|
+            toric = ToricIdealGenerator.new(hilbert_basis, term_order)
+            toric_ideal = toric.find
 
-        # seperate into positives and negatives but keep placement
-        # (-1,2,3,-4) becomes (0,2,3,0) and (1,0,0,4) store in same row        
-        exponent_vectors = toric_ideal.row_vectors.collect{|row|
-          positive = row.collect{|el| el > 0 ? el : 0}
-          negative = row.collect{|el| el < 0 ? el.abs : 0}
-          {:positive => positive, :negative => negative}
-        }
+            # seperate into positives and negatives but keep placement
+            # (-1,2,3,-4) becomes (0,2,3,0) and (1,0,0,4) store in same row        
+            exponent_vectors = toric_ideal.row_vectors.collect{|row|
+              positive = row.collect{|el| el > 0 ? el : 0}
+              negative = row.collect{|el| el < 0 ? el.abs : 0}
+              {:positive => positive, :negative => negative}
+            }
 
-        # if dot products are equal then not monomial - save term order with no
-        # if dot products are not equal then monomial - save term order with yes
-        monomial = true
-        exponent_vectors.each{|exp_vector|
-          # positive
-          dot_positive = Vector.elements(exp_vector[:positive]).inner_product Vector.elements(term_order)
-          # negative
-          dot_negative = Vector.elements(exp_vector[:negative]).inner_product Vector.elements(term_order)
+            # if dot products are equal then not monomial - save term order with no
+            # if dot products are not equal then monomial - save term order with yes
+            monomial = true
+            exponent_vectors.each{|exp_vector|
+              # positive
+              dot_positive = Vector.elements(exp_vector[:positive]).inner_product Vector.elements(term_order)
+              # negative
+              dot_negative = Vector.elements(exp_vector[:negative]).inner_product Vector.elements(term_order)
           
-          monomial = false if dot_positive == dot_negative            
-        }
+              monomial = false if dot_positive == dot_negative            
+            }
         
-        # Output
-        File.open(outputfilename, "a") do |file|
-          file.puts "Term order: [#{term_order.join(', ')}] - monomial: #{monomial}" if @options.verbose
+            # Output
+            File.open(outputfilename, "a") do |file|
+              file.puts "Term order: [#{term_order.join(', ')}] - monomial: #{monomial}" if @options.verbose
+            end
+          }
         end
-      }
-
+      rescue Timeout::Error
+        return
+      end
     end
 
 end
