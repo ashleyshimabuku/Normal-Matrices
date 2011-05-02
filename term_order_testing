@@ -59,7 +59,7 @@ class App
     @options.verbose = false
     @options.very_verbose = false
     @options.quiet = false
-    @options.timeout = 1200
+    @options.timeout = 1800
     
   end
 
