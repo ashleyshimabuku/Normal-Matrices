@@ -1,3 +1,8 @@
+About
+===============================================================================
+
+A Computational Algebra project that computes normal matrices with no unimodular triangulation using a triangulation polytope.
+
 Dependencies
 ===============================================================================
 
